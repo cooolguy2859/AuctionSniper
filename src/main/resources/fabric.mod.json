@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "auction_sniper",
+  "version": "${version}",
+  "name": "AuctionSniper",
+  "description": "Client-side auction listing scanner and deal review helper.",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.auctionsniper.AuctionSniperClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
