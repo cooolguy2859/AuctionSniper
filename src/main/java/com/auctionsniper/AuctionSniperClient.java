@@ -1,5 +1,6 @@
 package com.auctionsniper;
 
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -29,8 +30,15 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     AuctionScanner.startScan();
                     return 1;
                 }))
+                .then(ClientCommandManager.literal("cancel").executes(context -> {
+                    AuctionScanner.cancel();
+                    return 1;
+                }))
                 .then(ClientCommandManager.literal("status").executes(context -> {
-                    msg("Manual mode | min profit: " + SETTINGS.minimumProfit + " | budget: " + SETTINGS.maxBudget);
+                    msg("Scan: " + (AuctionScanner.isScanning() ? "running" : "idle")
+                            + " | pages: " + AuctionScanner.getPages()
+                            + " | min profit: " + SETTINGS.minimumProfit
+                            + " | budget: " + SETTINGS.maxBudget);
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("profit").then(ClientCommandManager.literal("min")
@@ -48,10 +56,17 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             SETTINGS.save();
                             msg("Maximum budget set to " + SETTINGS.maxBudget);
                             return 1;
-                        }))
-                )
+                        })))
+                .then(ClientCommandManager.literal("hud")
+                    .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                        .executes(context -> {
+                            SETTINGS.showHud = BoolArgumentType.getBool(context, "enabled");
+                            SETTINGS.save();
+                            msg("HUD " + (SETTINGS.showHud ? "enabled" : "disabled"));
+                            return 1;
+                        })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | /ahsniper status | /ahsniper profit min <coins> | /ahsniper budget <coins>");
+                    msg("/ahsniper scan | cancel | status | profit min <coins> | budget <coins> | hud <true|false>");
                     return 1;
                 }))
             )
@@ -71,7 +86,8 @@ public final class AuctionSniperClient implements ClientModInitializer {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null) {
                 drawContext.drawTextWithShadow(client.textRenderer,
-                    "AuctionSniper | manual | min profit " + SETTINGS.minimumProfit,
+                    "AuctionSniper | " + (AuctionScanner.isScanning() ? "SCANNING" : "idle")
+                            + " | min profit " + SETTINGS.minimumProfit,
                     6, 6, 0xFFFFFF);
             }
         });
