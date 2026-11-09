@@ -1,7 +1,7 @@
 package com.auctionsniper;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
@@ -30,7 +30,7 @@ public final class BalanceOverlay {
 
             for (PlayerEntity target : client.world.getPlayers()) {
                 if (target == client.player || target.squaredDistanceTo(client.player) > 32 * 32) continue;
-                String name = target.getGameProfile().getName();
+                String name = target.getName().getString();
                 long last = lastRequestTick.getOrDefault(name.toLowerCase(Locale.ROOT), -10000L);
                 if (tick - last < 1200) continue;
                 lastRequestTick.put(name.toLowerCase(Locale.ROOT), tick);
@@ -40,36 +40,24 @@ public final class BalanceOverlay {
             }
         });
 
-        WorldRenderEvents.AFTER_ENTITIES.register(context -> {
+        // Temporary HUD fallback for Minecraft 1.21.11; world nameplates need
+        // a version-specific renderer integration.
+        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> {
             MinecraftClient client = MinecraftClient.getInstance();
-            if (!enabled || client.world == null || client.player == null || context.matrixStack() == null) return;
-            MatrixStack matrices = context.matrixStack();
-            Vec3d camera = context.camera().getPos();
-            VertexConsumerProvider.Immediate consumers = client.getBufferBuilders().getEntityVertexConsumers();
-
+            if (!enabled || client.world == null || client.player == null) return;
+            int y = 22;
             for (PlayerEntity target : client.world.getPlayers()) {
-                if (target == client.player || target.squaredDistanceTo(camera) > 48 * 48) continue;
-                Long balance = AuctionSniperClient.BALANCES.get(target.getGameProfile().getName());
+                if (target == client.player || target.squaredDistanceTo(client.player) > 32 * 32) continue;
+                Long balance = AuctionSniperClient.BALANCES.get(target.getName().getString());
                 if (balance == null) continue;
-
-                String label = "BAL: " + format(balance);
-                double x = target.getX() - camera.x;
-                double y = target.getY() + target.getHeight() + 0.45 - camera.y;
-                double z = target.getZ() - camera.z;
-
-                matrices.push();
-                matrices.translate(x, y, z);
-                matrices.multiply(client.getEntityRenderDispatcher().getRotation());
-                matrices.scale(-0.025f, -0.025f, 0.025f);
-                float textX = -client.textRenderer.getWidth(label) / 2.0f;
-                client.textRenderer.draw(Text.literal(label), textX, 0, 0x55FF55, false,
-                        matrices.peek().getPositionMatrix(), consumers,
-                        net.minecraft.client.font.TextRenderer.TextLayerType.SEE_THROUGH,
-                        0x50000000, 15728880);
-                matrices.pop();
+                drawContext.drawTextWithShadow(client.textRenderer,
+                        target.getName().getString() + " BAL: " + format(balance),
+                        6, y, 0x55FF55);
+                y += 11;
+                if (y > 100) break;
             }
-            consumers.draw();
         });
+
     }
 
     public static void setEnabled(boolean value) { enabled = value; }
