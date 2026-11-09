@@ -27,6 +27,7 @@ public final class AuctionScanner {
     private static int attemptedBuys;
     private static final int MAX_BUYS_PER_SCAN = 1;
     private static final Set<String> attemptedListings = new HashSet<>();
+    private static final Set<String> observedListings = new HashSet<>();
 
     private AuctionScanner() {}
 
@@ -60,6 +61,7 @@ public final class AuctionScanner {
         uniqueItems.clear();
         attemptedBuys = 0;
         attemptedListings.clear();
+        observedListings.clear();
         client.getNetworkHandler().sendChatCommand("ah");
         AuctionSniperClient.msg("Opening Auction House. Scan only reads listings; it will not click auction items.");
     }
@@ -119,9 +121,12 @@ public final class AuctionScanner {
             if (listingPrice != null) {
                 String key = PriceTracker.itemKey(stack);
                 Long median = PriceTracker.median(key);
-                if (autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
+                String observation = fingerprint + "|" + i + "|" + key + "|" + listingPrice;
+                boolean newObservation = observedListings.add(observation);
+                if (newObservation && autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
                         && median != null && PriceTracker.sampleCount(key) >= 8
                         && listingPrice <= AuctionSniperClient.SETTINGS.maxBudget
+                        && AuctionSniperClient.getOwnBalance() >= listingPrice
                         && median > listingPrice
                         && median - listingPrice >= AuctionSniperClient.SETTINGS.minimumProfit
                         && listingPrice <= median / 2
@@ -138,7 +143,7 @@ public final class AuctionScanner {
                         return;
                     }
                 }
-                PriceTracker.observe(key, listingPrice);
+                if (newObservation) PriceTracker.observe(key, listingPrice);
             }
             AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " x" + stack.getCount());
         }
@@ -196,6 +201,7 @@ public final class AuctionScanner {
 
     private static void finish(String message) {
         scanning = false;
+        autoBuyEnabled = false;
         AuctionSniperClient.msg(message);
     }
 }
