@@ -21,11 +21,12 @@ public final class AuctionSniperClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         SETTINGS.load();
+        AuctionScanner.initialize();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-            dispatcher.register(ClientCommandManager.literal("ah")
+            dispatcher.register(ClientCommandManager.literal("ahsniper")
                 .then(ClientCommandManager.literal("scan").executes(context -> {
-                    AuctionScanner.scan();
+                    AuctionScanner.startScan();
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("status").executes(context -> {
@@ -47,9 +48,10 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             SETTINGS.save();
                             msg("Maximum budget set to " + SETTINGS.maxBudget);
                             return 1;
-                        })))
+                        }))
+                )
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ah scan | /ah status | /ah profit min <coins> | /ah budget <coins>");
+                    msg("/ahsniper scan | /ahsniper status | /ahsniper profit min <coins> | /ahsniper budget <coins>");
                     return 1;
                 }))
             )
@@ -74,7 +76,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
             }
         });
 
-        msg("Loaded. Use /ah help. Scans visible item names/counts only.");
+        msg("Loaded. Use /ahsniper help.");
     }
 
     public static void msg(String message) {
