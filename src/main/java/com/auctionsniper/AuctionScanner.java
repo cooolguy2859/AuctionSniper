@@ -18,6 +18,9 @@ public final class AuctionScanner {
     private static int totalListings;
     private static String lastFingerprint = "";
     private static final Set<String> uniqueItems = new HashSet<>();
+    // Menu slot indexes: 1 = previous page, 8 = next page.
+    private static final int PREVIOUS_PAGE_SLOT = 1;
+    private static final int NEXT_PAGE_SLOT = 8;
 
     private AuctionScanner() {}
 
@@ -71,6 +74,7 @@ public final class AuctionScanner {
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         int found = 0;
         for (int i = 0; i < listingSlots; i++) {
+            if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
             if (stack.isEmpty()) continue;
             found++;
@@ -104,25 +108,17 @@ public final class AuctionScanner {
 
     private static int findNavigationButton(ScreenHandler handler, boolean next) {
         int listingSlots = Math.max(0, handler.slots.size() - 36);
-        for (int i = listingSlots; i < handler.slots.size(); i++) {
-            ItemStack stack = handler.slots.get(i).getStack();
-            if (stack.isEmpty()) continue;
-            String name = stack.getName().getString().trim().toLowerCase()
-                    .replaceAll("[^a-z ]", "").replaceAll("\\s+", " ");
-            if (next) {
-                if (name.equals("next") || name.equals("next page") || name.equals("page next")) return i;
-            } else {
-                if (name.equals("previous") || name.equals("previous page")
-                        || name.equals("back") || name.equals("page previous")) return i;
-            }
-        }
-        return -1;
+        int slot = next ? NEXT_PAGE_SLOT : PREVIOUS_PAGE_SLOT;
+        if (slot >= listingSlots || slot >= handler.slots.size()) return -1;
+        if (handler.slots.get(slot).getStack().isEmpty()) return -1;
+        return slot;
     }
 
     private static String fingerprint(ScreenHandler handler) {
         StringBuilder result = new StringBuilder();
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         for (int i = 0; i < listingSlots; i++) {
+            if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
             if (!stack.isEmpty()) result.append(i).append(':').append(stack.getItem().toString())
                     .append(':').append(stack.getName().getString()).append(':').append(stack.getCount()).append('|');
