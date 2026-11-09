@@ -23,12 +23,22 @@ public final class AuctionScanner {
     private static final int NEXT_PAGE_SLOT = 53;
     private static final int SORT_ITEMS_SLOT = 49;
     private static boolean sortConfigured;
+    private static boolean autoBuyEnabled;
+    private static int attemptedBuys;
+    private static final int MAX_BUYS_PER_SCAN = 1;
+    private static final Set<String> attemptedListings = new HashSet<>();
 
     private AuctionScanner() {}
 
     public static void initialize() { ClientTickEvents.END_CLIENT_TICK.register(AuctionScanner::tick); }
     public static boolean isScanning() { return scanning; }
     public static int getPages() { return pages; }
+    public static boolean isAutoBuyEnabled() { return autoBuyEnabled; }
+    public static void setAutoBuyEnabled(boolean enabled) {
+        autoBuyEnabled = enabled;
+        AuctionSniperClient.msg("Auto-buy " + (enabled ? "armed (strict price checks)" : "disabled") + ".");
+    }
+    public static int getPricedListings() { return PriceTracker.pricedListings(); }
 
     public static void startScan() {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -48,6 +58,8 @@ public final class AuctionScanner {
         lastFingerprint = "";
         sortConfigured = false;
         uniqueItems.clear();
+        attemptedBuys = 0;
+        attemptedListings.clear();
         client.getNetworkHandler().sendChatCommand("ah");
         AuctionSniperClient.msg("Opening Auction House. Scan only reads listings; it will not click auction items.");
     }
@@ -103,6 +115,31 @@ public final class AuctionScanner {
             String itemName = stack.getName().getString();
             uniqueItems.add(itemName);
             MarketDatabase.observe(itemName, stack.getCount());
+            Long listingPrice = PriceTracker.readPrice(stack);
+            if (listingPrice != null) {
+                String key = PriceTracker.itemKey(stack);
+                Long median = PriceTracker.median(key);
+                if (autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
+                        && median != null && PriceTracker.sampleCount(key) >= 8
+                        && listingPrice <= AuctionSniperClient.SETTINGS.maxBudget
+                        && median > listingPrice
+                        && median - listingPrice >= AuctionSniperClient.SETTINGS.minimumProfit
+                        && listingPrice <= median / 2
+                        && isSafeListingName(itemName)
+                        && attemptedListings.add(key + "|" + listingPrice)) {
+                    if (client.interactionManager != null) {
+                        // A click may open a server confirmation menu; never click that menu automatically.
+                        client.interactionManager.clickSlot(handler.syncId, i, 0,
+                                SlotActionType.PICKUP, client.player);
+                        attemptedBuys++;
+                        autoBuyEnabled = false;
+                        finish("Clicked one qualifying listing (" + listingPrice
+                                + " coins). Auto-buy disabled. Review any server confirmation screen manually.");
+                        return;
+                    }
+                }
+                PriceTracker.observe(key, listingPrice);
+            }
             AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " x" + stack.getCount());
         }
         pages++;
@@ -135,6 +172,14 @@ public final class AuctionScanner {
         if (slot >= listingSlots || slot >= handler.slots.size()) return -1;
         if (handler.slots.get(slot).getStack().isEmpty()) return -1;
         return slot;
+    }
+
+    private static boolean isSafeListingName(String name) {
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        return !lower.contains("rank") && !lower.contains("upgrade")
+                && !lower.contains("permanent") && !lower.contains("claim")
+                && !lower.contains("sort") && !lower.contains("search")
+                && !lower.contains("filter") && !lower.contains("page");
     }
 
     private static String fingerprint(ScreenHandler handler) {
