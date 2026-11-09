@@ -106,7 +106,7 @@ public final class AuctionScanner {
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         for (int i = listingSlots; i < handler.slots.size(); i++) {
             ItemStack stack = handler.slots.get(i).getStack();
-            if (stack.isEmpty() || !stack.hasCustomName()) continue;
+            if (stack.isEmpty()) continue;
             String name = stack.getName().getString().trim().toLowerCase()
                     .replaceAll("[^a-z ]", "").replaceAll("\\s+", " ");
             if (next) {
