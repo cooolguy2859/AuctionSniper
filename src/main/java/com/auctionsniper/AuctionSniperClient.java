@@ -25,6 +25,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
         SETTINGS.load();
         MarketDatabase.load();
         AuctionScanner.initialize();
+        BalanceOverlay.initialize();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
             dispatcher.register(ClientCommandManager.literal("ahsniper")
@@ -32,6 +33,33 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     AuctionScanner.startScan();
                     return 1;
                 }))
+                .then(ClientCommandManager.literal("balance")
+                    .then(ClientCommandManager.literal("enable").executes(context -> {
+                        BalanceOverlay.setEnabled(true);
+                        msg("Player balance labels enabled.");
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("disable").executes(context -> {
+                        BalanceOverlay.setEnabled(false);
+                        msg("Player balance labels disabled.");
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("refresh").executes(context -> {
+                        BalanceOverlay.requestRefresh();
+                        msg("Refreshing nearby player balances (rate limited).");
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("status").executes(context -> {
+                        msg("Balance labels: " + (BalanceOverlay.isEnabled() ? "enabled" : "disabled")
+                                + " | cached players: " + BALANCES.size());
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("clear").executes(context -> {
+                        BALANCES.clear();
+                        BalanceOverlay.clearRequestCache();
+                        msg("Player balance cache cleared.");
+                        return 1;
+                    })))
                 .then(ClientCommandManager.literal("gui").executes(context -> {
                     MinecraftClient.getInstance().setScreen(new MarketScreen());
                     return 1;
@@ -83,7 +111,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | gui | profit min <amount> | budget <amount|balance> | hud <true|false>");
+                    msg("/ahsniper scan | cancel | status | gui | balance enable|disable|refresh|status|clear | profit min <amount> | budget <amount|balance> | hud <true|false>");
                     return 1;
                 }))
             )
@@ -98,10 +126,15 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     if (parsed >= 0) ownBalance = parsed;
                 }
             }
-            Matcher playerMatcher = Pattern.compile("(?i)(?:balance|bal)\\s*(?:of)?\\s*([A-Za-z0-9_]{1,16})\\D{0,20}([0-9][0-9,]*)").matcher(line);
+            Matcher playerMatcher = Pattern.compile("(?i)(?:balance|bal)\\s*(?:of)?\\s*([A-Za-z0-9_]{1,16})\\D{0,20}\\$?([0-9][0-9,]*)\\s*(k|m|b)?").matcher(line);
             if (playerMatcher.find()) {
-                try { BALANCES.put(playerMatcher.group(1), Long.parseLong(playerMatcher.group(2).replace(",", ""))); }
-                catch (NumberFormatException ignored) { }
+                long parsed = parseAmount(playerMatcher.group(2) + (playerMatcher.group(3) == null ? "" : playerMatcher.group(3)));
+                if (parsed >= 0) BALANCES.put(playerMatcher.group(1), parsed);
+            }
+            Matcher ownerFirst = Pattern.compile("(?i)([A-Za-z0-9_]{1,16})(?:'s)?\\s+(?:balance|bal)\\s*[:=]?\\s*\\$?([0-9][0-9,]*)\\s*(k|m|b)?").matcher(line);
+            if (ownerFirst.find()) {
+                long parsed = parseAmount(ownerFirst.group(2) + (ownerFirst.group(3) == null ? "" : ownerFirst.group(3)));
+                if (parsed >= 0) BALANCES.put(ownerFirst.group(1), parsed);
             }
         });
 
