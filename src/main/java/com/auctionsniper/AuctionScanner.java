@@ -12,11 +12,12 @@ import java.util.Set;
 
 public final class AuctionScanner {
     private static boolean scanning;
+    private static boolean movingForward = true;
     private static int waitTicks;
     private static int pages;
     private static int totalListings;
-    private static int emptyPageCount;
-    private static final Set<String> seenPages = new HashSet<>();
+    private static int sweepPages;
+    private static String lastFingerprint = "";
     private static final Set<String> uniqueItems = new HashSet<>();
 
     private AuctionScanner() {}
@@ -40,15 +41,16 @@ public final class AuctionScanner {
         }
 
         scanning = true;
+        movingForward = true;
         waitTicks = 30;
         pages = 0;
         totalListings = 0;
-        emptyPageCount = 0;
-        seenPages.clear();
+        sweepPages = 0;
+        lastFingerprint = "";
         uniqueItems.clear();
 
         client.getNetworkHandler().sendChatCommand("ah");
-        AuctionSniperClient.msg("Opening Auction House. Scan started...");
+        AuctionSniperClient.msg("Opening Auction House. Continuous scan started; close the menu to stop.");
     }
 
     public static void cancel() {
@@ -56,25 +58,29 @@ public final class AuctionScanner {
             AuctionSniperClient.msg("No scan is running.");
             return;
         }
-        finish("Scan cancelled. Pages: " + pages + ", listings: " + totalListings + ".");
+        finish("Scan cancelled. Pages visited: " + pages + ", listings seen: " + totalListings + ".");
     }
 
     private static void tick(MinecraftClient client) {
-        if (!scanning || client.player == null) return;
+        if (!scanning) return;
+        if (client.player == null || client.getNetworkHandler() == null) {
+            finish("Scan stopped because you left the server.");
+            return;
+        }
         if (waitTicks-- > 0) return;
 
         if (!(client.currentScreen instanceof HandledScreen<?>)) {
-            finish("Auction House menu was not detected. Open it and try again.");
+            finish("Auction House closed. Continuous scan stopped.");
             return;
         }
 
         ScreenHandler handler = client.player.currentScreenHandler;
         String fingerprint = fingerprint(handler);
-        if (!seenPages.add(fingerprint)) {
-            finish("Repeated page detected; stopping to avoid a loop. Pages: " + pages
-                    + ", listings: " + totalListings + ", unique item types: " + uniqueItems.size() + ".");
+        if (fingerprint.equals(lastFingerprint) && !lastFingerprint.isEmpty()) {
+            finish("Page did not change after navigation. Stopped to avoid getting stuck.");
             return;
         }
+        lastFingerprint = fingerprint;
 
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         int found = 0;
@@ -84,27 +90,29 @@ public final class AuctionScanner {
             found++;
             String itemName = stack.getName().getString();
             uniqueItems.add(itemName);
-            AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " x" + stack.getCount());
+            AuctionSniperClient.msg("Page visit " + (pages + 1) + " | " + itemName + " x" + stack.getCount());
         }
 
         pages++;
+        sweepPages++;
         totalListings += found;
-        emptyPageCount = found == 0 ? emptyPageCount + 1 : 0;
-        AuctionSniperClient.msg("Page " + pages + " scanned: " + found + " non-empty slots.");
+        AuctionSniperClient.msg("Page visit " + pages + " scanned: " + found + " non-empty slots.");
 
-        if (pages >= 100) {
-            finish("Safety limit of 100 pages reached. Listings: " + totalListings + ".");
-            return;
-        }
-        if (emptyPageCount >= 2) {
-            finish("Two empty pages found. Listings: " + totalListings + ".");
-            return;
+        int navigationSlot = movingForward ? findNextButton(handler) : findPreviousButton(handler);
+        if (navigationSlot < 0 && movingForward) {
+            movingForward = false;
+            navigationSlot = findPreviousButton(handler);
+            AuctionSniperClient.msg("Reached the last page. Scanning backward...");
+        } else if (navigationSlot < 0) {
+            movingForward = true;
+            sweepPages = 0;
+            navigationSlot = findNextButton(handler);
+            AuctionSniperClient.msg("Reached the first page. Starting another forward scan...");
         }
 
-        int nextSlot = findNextButton(handler);
-        if (nextSlot < 0) {
-            finish("Could not identify a Next button. Pages: " + pages + ", listings: "
-                    + totalListings + ", unique item types: " + uniqueItems.size() + ".");
+        if (navigationSlot < 0) {
+            finish("Could not find a page navigation button. Pages visited: " + pages
+                    + ", unique item types: " + uniqueItems.size() + ".");
             return;
         }
         if (client.interactionManager == null) {
@@ -112,17 +120,30 @@ public final class AuctionScanner {
             return;
         }
 
-        client.interactionManager.clickSlot(handler.syncId, nextSlot, 0, SlotActionType.PICKUP, client.player);
+        client.interactionManager.clickSlot(handler.syncId, navigationSlot, 0, SlotActionType.PICKUP, client.player);
         waitTicks = 15;
     }
 
     private static int findNextButton(ScreenHandler handler) {
+        return findButton(handler, true);
+    }
+
+    private static int findPreviousButton(ScreenHandler handler) {
+        return findButton(handler, false);
+    }
+
+    private static int findButton(ScreenHandler handler, boolean next) {
         for (int i = 0; i < handler.slots.size(); i++) {
             ItemStack stack = handler.slots.get(i).getStack();
             if (stack.isEmpty()) continue;
             String name = stack.getName().getString().toLowerCase();
-            if (name.contains("next") || name.contains("forward")
-                    || name.equals(">") || name.contains("»") || name.contains("→")) return i;
+            if (next) {
+                if (name.contains("next") || name.contains("forward")
+                        || name.equals(">") || name.contains("»") || name.contains("→")) return i;
+            } else if (name.contains("previous") || name.contains("back")
+                    || name.equals("<") || name.contains("«") || name.contains("←")) {
+                return i;
+            }
         }
         return -1;
     }
