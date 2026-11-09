@@ -23,6 +23,10 @@ public final class AuctionScanner {
     private static final int NEXT_PAGE_SLOT = 53;
     private static final int SORT_ITEMS_SLOT = 49;
     private static boolean sortConfigured;
+    private static int sortModeIndex;
+    private static final String[] SORT_MODES = {"Highest Price", "Lowest Price", "Expiring Soonest", "Expiring Latest", "New Items First", "Old Items First"};
+    private static String pendingFingerprint = "";
+    private static boolean awaitingPageChange;
     private static boolean autoBuyEnabled;
     private static int attemptedBuys;
     private static final int MAX_BUYS_PER_SCAN = 1;
@@ -58,6 +62,9 @@ public final class AuctionScanner {
         totalListings = 0;
         lastFingerprint = "";
         sortConfigured = false;
+        sortModeIndex = 0;
+        awaitingPageChange = false;
+        pendingFingerprint = "";
         uniqueItems.clear();
         attemptedBuys = 0;
         attemptedListings.clear();
@@ -84,6 +91,23 @@ public final class AuctionScanner {
         ScreenHandler handler = client.player.currentScreenHandler;
         if (!sortConfigured) {
             int listingSlots = Math.max(0, handler.slots.size() - 36);
+            if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size() || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) { finish("Could not find Sort Items control in slot 49. Stopped safely."); return; }
+            if (client.interactionManager == null) { finish("Could not interact with Sort Items."); return; }
+            if (sortModeIndex > 0) {
+                client.interactionManager.clickSlot(handler.syncId, SORT_ITEMS_SLOT, 0, SlotActionType.PICKUP, client.player);
+                waitTicks = 15;
+                AuctionSniperClient.msg("Switching sort mode to " + SORT_MODES[sortModeIndex] + ".");
+                sortConfigured = true; lastFingerprint = ""; return;
+            }
+            sortConfigured = true;
+            AuctionSniperClient.msg("Scanning sort mode: " + SORT_MODES[sortModeIndex] + ".");
+        }
+        String fingerprint = fingerprint(handler);
+        if (awaitingPageChange) {
+            if (fingerprint.equals(pendingFingerprint)) { finish("Page did not change after clicking navigation. Stopped safely."); return; }
+            awaitingPageChange = false; pendingFingerprint = "";
+        }
+        int listingSlots = Math.max(0, handler.slots.size() - 36);
             if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size()
                     || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) {
                 finish("Could not find Sort Items control in slot 49. Stopped safely.");
@@ -151,22 +175,18 @@ public final class AuctionScanner {
         totalListings += found;
         AuctionSniperClient.msg("Page " + pages + " scanned: " + found + " non-empty slots.");
 
-        int nav = findNavigationButton(handler, movingForward);
-        if (nav < 0 && movingForward) {
-            movingForward = false;
-            nav = findNavigationButton(handler, false);
-            if (nav >= 0) AuctionSniperClient.msg("Reached last page. Going backward.");
-        } else if (nav < 0) {
-            movingForward = true;
-            nav = findNavigationButton(handler, true);
-            if (nav >= 0) AuctionSniperClient.msg("Reached first page. Starting next scan cycle.");
-        }
+        int nav = findNavigationButton(handler, true);
         if (nav < 0) {
-            finish("No clearly labelled page button found. Stopped rather than risk clicking an auction listing."); return;
+            sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
+            sortConfigured = false; lastFingerprint = ""; movingForward = true; waitTicks = 10;
+            AuctionSniperClient.msg("Finished sort mode. Next mode: " + SORT_MODES[sortModeIndex] + ".");
+            return;
         }
         if (client.interactionManager == null) {
             finish("Could not interact with the Auction House menu."); return;
         }
+        pendingFingerprint = fingerprint;
+        awaitingPageChange = true;
         client.interactionManager.clickSlot(handler.syncId, nav, 0, SlotActionType.PICKUP, client.player);
         waitTicks = 15;
     }
