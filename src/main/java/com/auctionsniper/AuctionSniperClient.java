@@ -60,6 +60,15 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         msg("Player balance cache cleared.");
                         return 1;
                     })))
+                .then(ClientCommandManager.literal("autobuy")
+                    .then(ClientCommandManager.literal("on").executes(context -> {
+                        AuctionScanner.setAutoBuyEnabled(true);
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("off").executes(context -> {
+                        AuctionScanner.setAutoBuyEnabled(false);
+                        return 1;
+                    })))
                 .then(ClientCommandManager.literal("gui").executes(context -> {
                     MinecraftClient.getInstance().setScreen(new MarketScreen());
                     return 1;
@@ -71,6 +80,8 @@ public final class AuctionSniperClient implements ClientModInitializer {
                 .then(ClientCommandManager.literal("status").executes(context -> {
                     msg("Scan: " + (AuctionScanner.isScanning() ? "running" : "idle")
                             + " | pages: " + AuctionScanner.getPages()
+                            + " | priced listings: " + AuctionScanner.getPricedListings()
+                            + " | auto-buy: " + (AuctionScanner.isAutoBuyEnabled() ? "armed" : "off")
                             + " | min profit: " + SETTINGS.minimumProfit
                             + " | budget cap: " + SETTINGS.maxBudget
                             + " | last own balance: " + (ownBalance < 0 ? "unknown" : ownBalance));
@@ -111,7 +122,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | gui | balance enable|disable|refresh|status|clear | profit min <amount> | budget <amount|balance> | hud <true|false>");
+                    msg("/ahsniper scan | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | profit min <amount> | budget <amount|balance> | hud <true|false>");
                     return 1;
                 }))
             )
