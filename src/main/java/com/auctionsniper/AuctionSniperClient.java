@@ -23,12 +23,17 @@ public final class AuctionSniperClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         SETTINGS.load();
+        MarketDatabase.load();
         AuctionScanner.initialize();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
             dispatcher.register(ClientCommandManager.literal("ahsniper")
                 .then(ClientCommandManager.literal("scan").executes(context -> {
                     AuctionScanner.startScan();
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("gui").executes(context -> {
+                    MinecraftClient.getInstance().setScreen(new MarketScreen());
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("cancel").executes(context -> {
@@ -78,7 +83,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | profit min <amount> | budget <amount|balance> | hud <true|false>");
+                    msg("/ahsniper scan | cancel | status | gui | profit min <amount> | budget <amount|balance> | hud <true|false>");
                     return 1;
                 }))
             )
