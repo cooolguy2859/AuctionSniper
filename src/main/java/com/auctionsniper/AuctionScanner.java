@@ -102,6 +102,7 @@ public final class AuctionScanner {
             found++;
             String itemName = stack.getName().getString();
             uniqueItems.add(itemName);
+            MarketDatabase.observe(itemName, stack.getCount());
             AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " x" + stack.getCount());
         }
         pages++;
@@ -140,7 +141,7 @@ public final class AuctionScanner {
         StringBuilder result = new StringBuilder();
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         for (int i = 0; i < listingSlots; i++) {
-            if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT) continue;
+            if (i >= PREVIOUS_PAGE_SLOT && i <= NEXT_PAGE_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
             if (!stack.isEmpty()) result.append(i).append(':').append(stack.getItem().toString())
                     .append(':').append(stack.getName().getString()).append(':').append(stack.getCount()).append('|');
