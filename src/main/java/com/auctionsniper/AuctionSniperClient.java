@@ -1,7 +1,7 @@
 package com.auctionsniper;
 
 import com.mojang.brigadier.arguments.BoolArgumentType;
-import com.mojang.brigadier.arguments.LongArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -16,8 +16,9 @@ import java.util.regex.Pattern;
 public final class AuctionSniperClient implements ClientModInitializer {
     public static final Settings SETTINGS = new Settings();
     public static final BalanceCache BALANCES = new BalanceCache();
-    private static final Pattern BALANCE_PATTERN =
-            Pattern.compile("(?i)(?:balance|bal)\\s*(?:of)?\\s*([A-Za-z0-9_]{1,16})?\\D{0,20}([0-9][0-9,]*)\\s*(?:coins?)?");
+    private static long ownBalance = -1;
+    private static final Pattern OWN_BALANCE_PATTERN =
+            Pattern.compile("(?i)(?:your\\s+)?(?:balance|bal)\\s*[:=]?\\s*\\$?([0-9][0-9,]*)\\s*(k|m|b)?");
 
     @Override
     public void onInitializeClient() {
@@ -38,23 +39,34 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     msg("Scan: " + (AuctionScanner.isScanning() ? "running" : "idle")
                             + " | pages: " + AuctionScanner.getPages()
                             + " | min profit: " + SETTINGS.minimumProfit
-                            + " | budget: " + SETTINGS.maxBudget);
+                            + " | budget cap: " + SETTINGS.maxBudget
+                            + " | last own balance: " + (ownBalance < 0 ? "unknown" : ownBalance));
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("profit").then(ClientCommandManager.literal("min")
-                    .then(ClientCommandManager.argument("coins", LongArgumentType.longArg(0))
+                    .then(ClientCommandManager.argument("amount", StringArgumentType.word())
                         .executes(context -> {
-                            SETTINGS.minimumProfit = LongArgumentType.getLong(context, "coins");
+                            long amount = parseAmount(StringArgumentType.getString(context, "amount"));
+                            if (amount < 0) { msg("Invalid amount. Examples: 200k, 1m, 500000."); return 0; }
+                            SETTINGS.minimumProfit = amount;
                             SETTINGS.save();
-                            msg("Minimum profit set to " + SETTINGS.minimumProfit);
+                            msg("Minimum profit set to " + amount);
                             return 1;
                         }))))
                 .then(ClientCommandManager.literal("budget")
-                    .then(ClientCommandManager.argument("coins", LongArgumentType.longArg(0))
+                    .then(ClientCommandManager.argument("amount", StringArgumentType.word())
                         .executes(context -> {
-                            SETTINGS.maxBudget = LongArgumentType.getLong(context, "coins");
+                            String raw = StringArgumentType.getString(context, "amount");
+                            long amount = raw.equalsIgnoreCase("balance") ? ownBalance : parseAmount(raw);
+                            if (amount < 0) {
+                                msg(raw.equalsIgnoreCase("balance")
+                                        ? "Balance not detected yet. Run /bal first, then /ahsniper budget balance. Or use /ahsniper budget 200k."
+                                        : "Invalid amount. Examples: 200k, 1m, 500000.");
+                                return 0;
+                            }
+                            SETTINGS.maxBudget = amount;
                             SETTINGS.save();
-                            msg("Maximum budget set to " + SETTINGS.maxBudget);
+                            msg("Maximum budget cap set to " + amount + " coins.");
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("hud")
@@ -66,18 +78,25 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | profit min <coins> | budget <coins> | hud <true|false>");
+                    msg("/ahsniper scan | cancel | status | profit min <amount> | budget <amount|balance> | hud <true|false>");
                     return 1;
                 }))
             )
         );
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            Matcher matcher = BALANCE_PATTERN.matcher(message.getString());
-            if (matcher.find() && matcher.group(1) != null) {
-                try {
-                    BALANCES.put(matcher.group(1), Long.parseLong(matcher.group(2).replace(",", "")));
-                } catch (NumberFormatException ignored) { }
+            String line = message.getString();
+            Matcher ownMatcher = OWN_BALANCE_PATTERN.matcher(line);
+            if (line.toLowerCase().contains("your balance") || line.toLowerCase().contains("your bal")) {
+                if (ownMatcher.find()) {
+                    long parsed = parseAmount(ownMatcher.group(1) + (ownMatcher.group(2) == null ? "" : ownMatcher.group(2)));
+                    if (parsed >= 0) ownBalance = parsed;
+                }
+            }
+            Matcher playerMatcher = Pattern.compile("(?i)(?:balance|bal)\\s*(?:of)?\\s*([A-Za-z0-9_]{1,16})\\D{0,20}([0-9][0-9,]*)").matcher(line);
+            if (playerMatcher.find()) {
+                try { BALANCES.put(playerMatcher.group(1), Long.parseLong(playerMatcher.group(2).replace(",", ""))); }
+                catch (NumberFormatException ignored) { }
             }
         });
 
@@ -87,12 +106,23 @@ public final class AuctionSniperClient implements ClientModInitializer {
             if (client.player != null) {
                 drawContext.drawTextWithShadow(client.textRenderer,
                     "AuctionSniper | " + (AuctionScanner.isScanning() ? "SCANNING" : "idle")
-                            + " | min profit " + SETTINGS.minimumProfit,
+                            + " | budget cap " + SETTINGS.maxBudget,
                     6, 6, 0xFFFFFF);
             }
         });
 
         msg("Loaded. Use /ahsniper help.");
+    }
+
+    private static long parseAmount(String raw) {
+        try {
+            String value = raw.toLowerCase().replace(",", "").replace("$", "");
+            long multiplier = 1;
+            if (value.endsWith("k")) { multiplier = 1_000L; value = value.substring(0, value.length() - 1); }
+            else if (value.endsWith("m")) { multiplier = 1_000_000L; value = value.substring(0, value.length() - 1); }
+            else if (value.endsWith("b")) { multiplier = 1_000_000_000L; value = value.substring(0, value.length() - 1); }
+            return Math.multiplyExact(Long.parseLong(value), multiplier);
+        } catch (RuntimeException e) { return -1; }
     }
 
     public static void msg(String message) {
