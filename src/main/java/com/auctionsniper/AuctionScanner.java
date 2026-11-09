@@ -19,8 +19,8 @@ public final class AuctionScanner {
     private static String lastFingerprint = "";
     private static final Set<String> uniqueItems = new HashSet<>();
     // Menu slot indexes: 1 = previous page, 8 = next page.
-    private static final int PREVIOUS_PAGE_SLOT = 1;
-    private static final int NEXT_PAGE_SLOT = 8;
+    private static final int PREVIOUS_PAGE_SLOT = 45;
+    private static final int NEXT_PAGE_SLOT = 53;
 
     private AuctionScanner() {}
 
