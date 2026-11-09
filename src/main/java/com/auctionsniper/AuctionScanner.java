@@ -12,16 +12,10 @@ import java.util.Set;
 
 public final class AuctionScanner {
     private static boolean scanning;
-    private static boolean movingForward = true;
     private static int waitTicks;
     private static int pages;
     private static int totalListings;
     private static String lastFingerprint = "";
-    private static final Set<String> uniqueItems = new HashSet<>();
-    // Menu slot indexes: 1 = previous page, 8 = next page.
-    private static final int PREVIOUS_PAGE_SLOT = 45;
-    private static final int NEXT_PAGE_SLOT = 53;
-    private static final int SORT_ITEMS_SLOT = 49;
     private static boolean sortConfigured;
     private static int sortModeIndex;
     private static final String[] SORT_MODES = {"Highest Price", "Lowest Price", "Expiring Soonest", "Expiring Latest", "New Items First", "Old Items First"};
@@ -30,6 +24,9 @@ public final class AuctionScanner {
     private static boolean autoBuyEnabled;
     private static int attemptedBuys;
     private static final int MAX_BUYS_PER_SCAN = 1;
+    private static final int PREVIOUS_PAGE_SLOT = 45;
+    private static final int NEXT_PAGE_SLOT = 53;
+    private static final int SORT_ITEMS_SLOT = 49;
     private static final Set<String> attemptedListings = new HashSet<>();
     private static final Set<String> observedListings = new HashSet<>();
 
@@ -48,15 +45,12 @@ public final class AuctionScanner {
     public static void startScan() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null || client.getNetworkHandler() == null) {
-            AuctionSniperClient.msg("Join a server before starting a scan.");
-            return;
+            AuctionSniperClient.msg("Join a server before starting a scan."); return;
         }
         if (scanning) {
-            AuctionSniperClient.msg("A scan is already running. Use /ahsniper cancel to stop it.");
-            return;
+            AuctionSniperClient.msg("A scan is already running. Use /ahsniper cancel to stop it."); return;
         }
         scanning = true;
-        movingForward = true;
         waitTicks = 30;
         pages = 0;
         totalListings = 0;
@@ -65,12 +59,11 @@ public final class AuctionScanner {
         sortModeIndex = 0;
         awaitingPageChange = false;
         pendingFingerprint = "";
-        uniqueItems.clear();
         attemptedBuys = 0;
         attemptedListings.clear();
         observedListings.clear();
         client.getNetworkHandler().sendChatCommand("ah");
-        AuctionSniperClient.msg("Opening Auction House. Scan only reads listings; it will not click auction items.");
+        AuctionSniperClient.msg("Opening Auction House. Scanner reads listings; auto-buy remains off unless enabled.");
     }
 
     public static void cancel() {
@@ -87,123 +80,102 @@ public final class AuctionScanner {
         if (!(client.currentScreen instanceof HandledScreen<?>)) {
             finish("Auction House closed. Scan stopped."); return;
         }
-
         ScreenHandler handler = client.player.currentScreenHandler;
+        int listingSlots = Math.max(0, handler.slots.size() - 36);
+
         if (!sortConfigured) {
-            int listingSlots = Math.max(0, handler.slots.size() - 36);
-            if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size() || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) { finish("Could not find Sort Items control in slot 49. Stopped safely."); return; }
-            if (client.interactionManager == null) { finish("Could not interact with Sort Items."); return; }
+            if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size()
+                    || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) {
+                finish("Could not safely identify Sort Items in slot 49."); return;
+            }
             if (sortModeIndex > 0) {
+                if (client.interactionManager == null) { finish("Could not change sort mode."); return; }
                 client.interactionManager.clickSlot(handler.syncId, SORT_ITEMS_SLOT, 0, SlotActionType.PICKUP, client.player);
+                sortConfigured = true;
                 waitTicks = 15;
-                AuctionSniperClient.msg("Switching sort mode to " + SORT_MODES[sortModeIndex] + ".");
-                sortConfigured = true; lastFingerprint = ""; return;
+                lastFingerprint = "";
+                AuctionSniperClient.msg("Changing sort to " + SORT_MODES[sortModeIndex] + ".");
+                return;
             }
             sortConfigured = true;
             AuctionSniperClient.msg("Scanning sort mode: " + SORT_MODES[sortModeIndex] + ".");
         }
+
         String fingerprint = fingerprint(handler);
         if (awaitingPageChange) {
-            if (fingerprint.equals(pendingFingerprint)) { finish("Page did not change after clicking navigation. Stopped safely."); return; }
-            awaitingPageChange = false; pendingFingerprint = "";
-        }
-        int listingSlots = Math.max(0, handler.slots.size() - 36);
-            if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size()
-                    || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) {
-                finish("Could not find Sort Items control in slot 49. Stopped safely.");
-                return;
+            if (fingerprint.equals(pendingFingerprint)) {
+                finish("Page did not change after navigation. Stopped safely."); return;
             }
-            if (client.interactionManager == null) {
-                finish("Could not interact with Sort Items.");
-                return;
-            }
-            // The supplied menu screenshot shows Highest Price selected; one toggle selects Lowest Price.
-            client.interactionManager.clickSlot(handler.syncId, SORT_ITEMS_SLOT, 0,
-                    SlotActionType.PICKUP, client.player);
-            sortConfigured = true;
-            waitTicks = 15;
-            AuctionSniperClient.msg("Changed Sort Items from Highest Price to Lowest Price.");
-            return;
+            awaitingPageChange = false;
+            pendingFingerprint = "";
         }
-        String fingerprint = fingerprint(handler);
-        if (fingerprint.equals(lastFingerprint) && !lastFingerprint.isEmpty()) {
-            finish("Page did not change after navigation. Stopped safely."); return;
-        }
-        lastFingerprint = fingerprint;
 
-        int listingSlots = Math.max(0, handler.slots.size() - 36);
         int found = 0;
         for (int i = 0; i < listingSlots; i++) {
-            if (i >= PREVIOUS_PAGE_SLOT && i <= NEXT_PAGE_SLOT) continue;
+            if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT || i == SORT_ITEMS_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
             if (stack.isEmpty()) continue;
-            found++;
             String itemName = stack.getName().getString();
-            uniqueItems.add(itemName);
-            MarketDatabase.observe(itemName, stack.getCount());
-            Long listingPrice = PriceTracker.readPrice(stack);
-            if (listingPrice != null) {
-                String key = PriceTracker.itemKey(stack);
-                Long median = PriceTracker.median(key);
-                String observation = fingerprint + "|" + i + "|" + key + "|" + listingPrice;
-                boolean newObservation = observedListings.add(observation);
-                if (newObservation && autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
-                        && median != null && PriceTracker.sampleCount(key) >= 8
-                        && listingPrice <= AuctionSniperClient.SETTINGS.maxBudget
-                        && AuctionSniperClient.getOwnBalance() >= listingPrice
-                        && median > listingPrice
-                        && median - listingPrice >= AuctionSniperClient.SETTINGS.minimumProfit
-                        && listingPrice <= median / 2
-                        && isSafeListingName(itemName)
-                        && attemptedListings.add(key + "|" + listingPrice)) {
-                    if (client.interactionManager != null) {
-                        // A click may open a server confirmation menu; never click that menu automatically.
-                        client.interactionManager.clickSlot(handler.syncId, i, 0,
-                                SlotActionType.PICKUP, client.player);
-                        attemptedBuys++;
-                        autoBuyEnabled = false;
-                        finish("Clicked one qualifying listing (" + listingPrice
-                                + " coins). Auto-buy disabled. Review any server confirmation screen manually.");
-                        return;
-                    }
-                }
-                if (newObservation) PriceTracker.observe(key, listingPrice);
+            Long price = PriceTracker.readPrice(stack);
+            if (price == null) continue;
+            found++;
+            String key = PriceTracker.itemKey(stack);
+            String observation = fingerprint + "|" + i + "|" + key + "|" + price;
+            boolean fresh = observedListings.add(observation);
+            Long average = PriceTracker.average(key);
+            if (fresh && autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
+                    && PriceTracker.sampleCount(key) >= 8 && average != null
+                    && price <= AuctionSniperClient.SETTINGS.maxBudget
+                    && AuctionSniperClient.getOwnBalance() >= price
+                    && average > price
+                    && average - price >= AuctionSniperClient.SETTINGS.minimumProfit
+                    && isSafeListingName(itemName)
+                    && attemptedListings.add(key + "|" + price)) {
+                AuctionSniperClient.msg("Found possible deal: " + itemName + " for " + price
+                        + " (average " + average + "). Auto-buy is paused for manual confirmation.");
+                autoBuyEnabled = false;
             }
-            AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " x" + stack.getCount());
+            if (fresh) PriceTracker.observe(key, price);
+            AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " | " + price + " coins");
         }
+
         pages++;
         totalListings += found;
-        AuctionSniperClient.msg("Page " + pages + " scanned: " + found + " non-empty slots.");
+        AuctionSniperClient.msg("Page " + pages + " scanned: " + found + " priced listings.");
 
-        int nav = findNavigationButton(handler, true);
-        if (nav < 0) {
-            sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
-            sortConfigured = false; lastFingerprint = ""; movingForward = true; waitTicks = 10;
-            AuctionSniperClient.msg("Finished sort mode. Next mode: " + SORT_MODES[sortModeIndex] + ".");
+        int next = navigationSlot(handler, NEXT_PAGE_SLOT);
+        if (next >= 0) {
+            if (client.interactionManager == null) { finish("Could not navigate Auction House."); return; }
+            pendingFingerprint = fingerprint;
+            awaitingPageChange = true;
+            client.interactionManager.clickSlot(handler.syncId, next, 0, SlotActionType.PICKUP, client.player);
+            waitTicks = 15;
             return;
         }
-        if (client.interactionManager == null) {
-            finish("Could not interact with the Auction House menu."); return;
-        }
-        pendingFingerprint = fingerprint;
-        awaitingPageChange = true;
-        client.interactionManager.clickSlot(handler.syncId, nav, 0, SlotActionType.PICKUP, client.player);
-        waitTicks = 15;
+
+        sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
+        sortConfigured = false;
+        lastFingerprint = "";
+        waitTicks = 10;
+        AuctionSniperClient.msg("Reached end of " + SORT_MODES[(sortModeIndex + SORT_MODES.length - 1) % SORT_MODES.length]
+                + ". Next sort: " + SORT_MODES[sortModeIndex] + ".");
     }
 
-    private static int findNavigationButton(ScreenHandler handler, boolean next) {
+    private static int navigationSlot(ScreenHandler handler, int slot) {
         int listingSlots = Math.max(0, handler.slots.size() - 36);
-        int slot = next ? NEXT_PAGE_SLOT : PREVIOUS_PAGE_SLOT;
         if (slot >= listingSlots || slot >= handler.slots.size()) return -1;
-        if (handler.slots.get(slot).getStack().isEmpty()) return -1;
-        return slot;
+        ItemStack button = handler.slots.get(slot).getStack();
+        if (button.isEmpty()) return -1;
+        String label = button.getName().getString().toLowerCase(java.util.Locale.ROOT);
+        // Do not click arbitrary occupied slots: require a page-specific label.
+        if (slot == NEXT_PAGE_SLOT && (label.contains("next") || label.contains("page"))) return slot;
+        return -1;
     }
 
     private static boolean isSafeListingName(String name) {
         String lower = name.toLowerCase(java.util.Locale.ROOT);
-        return !lower.contains("rank") && !lower.contains("upgrade")
-                && !lower.contains("permanent") && !lower.contains("claim")
-                && !lower.contains("sort") && !lower.contains("search")
+        return !lower.contains("rank") && !lower.contains("upgrade") && !lower.contains("permanent")
+                && !lower.contains("claim") && !lower.contains("sort") && !lower.contains("search")
                 && !lower.contains("filter") && !lower.contains("page");
     }
 
@@ -211,10 +183,10 @@ public final class AuctionScanner {
         StringBuilder result = new StringBuilder();
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         for (int i = 0; i < listingSlots; i++) {
-            if (i >= PREVIOUS_PAGE_SLOT && i <= NEXT_PAGE_SLOT) continue;
+            if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT || i == SORT_ITEMS_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
-            if (!stack.isEmpty()) result.append(i).append(':').append(stack.getItem().toString())
-                    .append(':').append(stack.getName().getString()).append(':').append(stack.getCount()).append('|');
+            if (!stack.isEmpty()) result.append(i).append(':').append(stack.getItem()).append(':')
+                    .append(stack.getName().getString()).append(':').append(stack.getCount()).append('|');
         }
         return result.toString();
     }
