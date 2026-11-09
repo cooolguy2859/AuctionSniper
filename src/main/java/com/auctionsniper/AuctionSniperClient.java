@@ -17,6 +17,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
     public static final Settings SETTINGS = new Settings();
     public static final BalanceCache BALANCES = new BalanceCache();
     private static long ownBalance = -1;
+    public static long getOwnBalance() { return ownBalance; }
     private static final Pattern OWN_BALANCE_PATTERN =
             Pattern.compile("(?i)(?:your\\s+)?(?:balance|bal)\\s*[:=]?\\s*\\$?([0-9][0-9,]*)\\s*(k|m|b)?");
 
