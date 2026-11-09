@@ -21,6 +21,8 @@ public final class AuctionScanner {
     // Menu slot indexes: 1 = previous page, 8 = next page.
     private static final int PREVIOUS_PAGE_SLOT = 45;
     private static final int NEXT_PAGE_SLOT = 53;
+    private static final int SORT_ITEMS_SLOT = 49;
+    private static boolean sortConfigured;
 
     private AuctionScanner() {}
 
@@ -44,6 +46,7 @@ public final class AuctionScanner {
         pages = 0;
         totalListings = 0;
         lastFingerprint = "";
+        sortConfigured = false;
         uniqueItems.clear();
         client.getNetworkHandler().sendChatCommand("ah");
         AuctionSniperClient.msg("Opening Auction House. Scan only reads listings; it will not click auction items.");
@@ -65,6 +68,25 @@ public final class AuctionScanner {
         }
 
         ScreenHandler handler = client.player.currentScreenHandler;
+        if (!sortConfigured) {
+            int listingSlots = Math.max(0, handler.slots.size() - 36);
+            if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size()
+                    || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) {
+                finish("Could not find Sort Items control in slot 49. Stopped safely.");
+                return;
+            }
+            if (client.interactionManager == null) {
+                finish("Could not interact with Sort Items.");
+                return;
+            }
+            // The supplied menu screenshot shows Highest Price selected; one toggle selects Lowest Price.
+            client.interactionManager.clickSlot(handler.syncId, SORT_ITEMS_SLOT, 0,
+                    SlotActionType.PICKUP, client.player);
+            sortConfigured = true;
+            waitTicks = 15;
+            AuctionSniperClient.msg("Changed Sort Items from Highest Price to Lowest Price.");
+            return;
+        }
         String fingerprint = fingerprint(handler);
         if (fingerprint.equals(lastFingerprint) && !lastFingerprint.isEmpty()) {
             finish("Page did not change after navigation. Stopped safely."); return;
@@ -74,7 +96,7 @@ public final class AuctionScanner {
         int listingSlots = Math.max(0, handler.slots.size() - 36);
         int found = 0;
         for (int i = 0; i < listingSlots; i++) {
-            if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT) continue;
+            if (i >= PREVIOUS_PAGE_SLOT && i <= NEXT_PAGE_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
             if (stack.isEmpty()) continue;
             found++;
