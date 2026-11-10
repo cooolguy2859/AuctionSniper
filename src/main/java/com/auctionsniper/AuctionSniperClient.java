@@ -25,6 +25,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
     public void onInitializeClient() {
         SETTINGS.load();
         MarketDatabase.load();
+        PriceTracker.load();
         AuctionScanner.initialize();
         BalanceOverlay.initialize();
 
