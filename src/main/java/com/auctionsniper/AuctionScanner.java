@@ -21,6 +21,7 @@ public final class AuctionScanner {
     private static final String[] SORT_MODES = {"Highest Price", "Lowest Price", "Expiring Soonest", "Expiring Latest", "New Items First", "Old Items First"};
     private static String pendingFingerprint = "";
     private static boolean awaitingPageChange;
+    private static boolean returningToFirstPage;
     private static boolean autoBuyEnabled;
     private static int attemptedBuys;
     private static final int MAX_BUYS_PER_SCAN = 1;
@@ -58,6 +59,7 @@ public final class AuctionScanner {
         sortConfigured = false;
         sortModeIndex = 0;
         awaitingPageChange = false;
+        returningToFirstPage = false;
         pendingFingerprint = "";
         attemptedBuys = 0;
         attemptedListings.clear();
@@ -110,6 +112,26 @@ public final class AuctionScanner {
             pendingFingerprint = "";
         }
 
+        if (returningToFirstPage) {
+            int previous = navigationSlot(handler, PREVIOUS_PAGE_SLOT);
+            if (previous >= 0) {
+                if (client.interactionManager == null) { finish("Could not return to the first Auction House page."); return; }
+                pendingFingerprint = fingerprint;
+                awaitingPageChange = true;
+                client.interactionManager.clickSlot(handler.syncId, previous, 0, SlotActionType.PICKUP, client.player);
+                waitTicks = 15;
+                AuctionSniperClient.msg("Moving back toward page 1 before changing sort.");
+                return;
+            }
+            returningToFirstPage = false;
+            sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
+            sortConfigured = false;
+            lastFingerprint = "";
+            waitTicks = 10;
+            AuctionSniperClient.msg("Back at page 1. Next sort: " + SORT_MODES[sortModeIndex] + ".");
+            return;
+        }
+
         int found = 0;
         for (int i = 0; i < listingSlots; i++) {
             if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT || i == SORT_ITEMS_SLOT) continue;
@@ -153,12 +175,23 @@ public final class AuctionScanner {
             return;
         }
 
-        sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
-        sortConfigured = false;
-        lastFingerprint = "";
-        waitTicks = 10;
-        AuctionSniperClient.msg("Reached end of " + SORT_MODES[(sortModeIndex + SORT_MODES.length - 1) % SORT_MODES.length]
-                + ". Next sort: " + SORT_MODES[sortModeIndex] + ".");
+        returningToFirstPage = true;
+        int previous = navigationSlot(handler, PREVIOUS_PAGE_SLOT);
+        if (previous >= 0) {
+            if (client.interactionManager == null) { finish("Could not return to the first Auction House page."); return; }
+            pendingFingerprint = fingerprint;
+            awaitingPageChange = true;
+            client.interactionManager.clickSlot(handler.syncId, previous, 0, SlotActionType.PICKUP, client.player);
+            waitTicks = 15;
+            AuctionSniperClient.msg("Reached the last page. Returning to page 1 before changing sort.");
+        } else {
+            returningToFirstPage = false;
+            sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
+            sortConfigured = false;
+            lastFingerprint = "";
+            waitTicks = 10;
+            AuctionSniperClient.msg("Already at page 1. Next sort: " + SORT_MODES[sortModeIndex] + ".");
+        }
     }
 
     private static int navigationSlot(ScreenHandler handler, int slot) {
@@ -169,6 +202,7 @@ public final class AuctionScanner {
         String label = button.getName().getString().toLowerCase(java.util.Locale.ROOT);
         // Do not click arbitrary occupied slots: require a page-specific label.
         if (slot == NEXT_PAGE_SLOT && (label.contains("next") || label.contains("page"))) return slot;
+        if (slot == PREVIOUS_PAGE_SLOT && (label.contains("previous") || label.contains("back") || label.contains("page"))) return slot;
         return -1;
     }
 
