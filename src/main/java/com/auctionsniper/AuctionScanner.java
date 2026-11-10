@@ -18,7 +18,7 @@ public final class AuctionScanner {
     private static String lastFingerprint = "";
     private static boolean sortConfigured;
     private static int sortModeIndex;
-    private static final String[] SORT_MODES = {"Highest Price", "Lowest Price", "Expiring Soonest", "Expiring Latest", "New Items First", "Old Items First"};
+    private static final String[] SORT_MODES = {"Highest Price", "Lowest Price"};
     private static String pendingFingerprint = "";
     private static boolean awaitingPageChange;
     private static boolean returningToFirstPage;
