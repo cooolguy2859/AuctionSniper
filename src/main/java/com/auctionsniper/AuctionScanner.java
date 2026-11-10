@@ -21,6 +21,7 @@ public final class AuctionScanner {
     private static final String[] SORT_MODES = {"Highest Price", "Lowest Price"};
     private static String pendingFingerprint = "";
     private static boolean awaitingPageChange;
+    private static int pageChangeWaitRetries;
     private static boolean returningToFirstPage;
     private static boolean autoBuyEnabled;
     private static boolean awaitingBuyConfirmation;
@@ -55,13 +56,14 @@ public final class AuctionScanner {
             AuctionSniperClient.msg("A scan is already running. Use /ahsniper cancel to stop it."); return;
         }
         scanning = true;
-        waitTicks = 30;
+        waitTicks = 15;
         pages = 0;
         totalListings = 0;
         lastFingerprint = "";
         sortConfigured = false;
         sortModeIndex = 0;
         awaitingPageChange = false;
+        pageChangeWaitRetries = 0;
         returningToFirstPage = false;
         pendingFingerprint = "";
         attemptedBuys = 0;
@@ -99,7 +101,7 @@ public final class AuctionScanner {
                 attemptedBuys++;
                 autoBuyEnabled = false;
                 AuctionSniperClient.msg("Confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins.");
-                waitTicks = 20;
+                waitTicks = 5;
                 return;
             }
             if (isAuctionBuyMenu(handler)) {
@@ -120,7 +122,7 @@ public final class AuctionScanner {
                 if (client.interactionManager == null) { finish("Could not change sort mode."); return; }
                 client.interactionManager.clickSlot(handler.syncId, SORT_ITEMS_SLOT, 0, SlotActionType.PICKUP, client.player);
                 sortConfigured = true;
-                waitTicks = 15;
+                waitTicks = 8;
                 lastFingerprint = "";
                 AuctionSniperClient.msg("Changing sort to " + SORT_MODES[sortModeIndex] + ".");
                 return;
@@ -132,9 +134,16 @@ public final class AuctionScanner {
         String fingerprint = fingerprint(handler);
         if (awaitingPageChange) {
             if (fingerprint.equals(pendingFingerprint)) {
-                finish("Page did not change after navigation. Stopped safely."); return;
+                // Auction House updates can arrive late; wait a little longer before declaring failure.
+                if (pageChangeWaitRetries++ < 3) {
+                    waitTicks = 8;
+                    return;
+                }
+                finish("Page did not change after waiting for the server. Stopped safely.");
+                return;
             }
             awaitingPageChange = false;
+            pageChangeWaitRetries = 0;
             pendingFingerprint = "";
         }
 
@@ -145,7 +154,7 @@ public final class AuctionScanner {
                 pendingFingerprint = fingerprint;
                 awaitingPageChange = true;
                 client.interactionManager.clickSlot(handler.syncId, previous, 0, SlotActionType.PICKUP, client.player);
-                waitTicks = 15;
+                waitTicks = 6;
                 AuctionSniperClient.msg("Moving back toward page 1 before changing sort.");
                 return;
             }
@@ -184,13 +193,12 @@ public final class AuctionScanner {
                     pendingBuyName = itemName;
                     awaitingBuyConfirmation = true;
                     client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
-                    waitTicks = 15;
+                    waitTicks = 6;
                     AuctionSniperClient.msg("Opening purchase confirmation for " + itemName + " at " + price + " coins.");
                     return;
                 }
             }
             if (fresh) PriceTracker.observe(key, price);
-            AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " | " + price + " coins");
         }
 
         pages++;
@@ -286,8 +294,16 @@ public final class AuctionScanner {
         for (int i = 0; i < listingSlots; i++) {
             if (i == PREVIOUS_PAGE_SLOT || i == NEXT_PAGE_SLOT || i == SORT_ITEMS_SLOT) continue;
             ItemStack stack = handler.slots.get(i).getStack();
-            if (!stack.isEmpty()) result.append(i).append(':').append(stack.getItem()).append(':')
-                    .append(stack.getName().getString()).append(':').append(stack.getCount()).append('|');
+            if (!stack.isEmpty()) {
+                result.append(i).append(':').append(stack.getItem()).append(':')
+                        .append(stack.getName().getString()).append(':').append(stack.getCount())
+                        .append(':').append(PriceTracker.readPrice(stack)).append(':');
+                var lore = stack.get(net.minecraft.component.DataComponentTypes.LORE);
+                if (lore != null) {
+                    for (net.minecraft.text.Text line : lore.lines()) result.append(line.getString()).append(';');
+                }
+                result.append('|');
+            }
         }
         return result.toString();
     }
