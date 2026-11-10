@@ -23,12 +23,13 @@ public final class AuctionScanner {
     private static boolean awaitingPageChange;
     private static int pageChangeWaitRetries;
     private static boolean returningToFirstPage;
+    private static boolean reopenAfterPurchase;
     private static boolean autoBuyEnabled;
     private static boolean awaitingBuyConfirmation;
     private static long pendingBuyPrice;
     private static String pendingBuyName = "";
     private static int attemptedBuys;
-    private static final int MAX_BUYS_PER_SCAN = 1;
+    private static final int MAX_BUYS_PER_SCAN = Integer.MAX_VALUE;
     private static final int PREVIOUS_PAGE_SLOT = 45;
     private static final int NEXT_PAGE_SLOT = 53;
     private static final int SORT_ITEMS_SLOT = 49;
@@ -67,13 +68,15 @@ public final class AuctionScanner {
         returningToFirstPage = false;
         pendingFingerprint = "";
         attemptedBuys = 0;
+        reopenAfterPurchase = false;
         awaitingBuyConfirmation = false;
         pendingBuyPrice = 0;
         pendingBuyName = "";
         attemptedListings.clear();
         observedListings.clear();
         client.getNetworkHandler().sendChatCommand("ah");
-        AuctionSniperClient.msg("Opening Auction House. Scanner reads listings; auto-buy remains off unless enabled.");
+        autoBuyEnabled = true;
+        AuctionSniperClient.msg("Continuous Auction House scan and auto-buy enabled; budget and profit checks apply.");
     }
 
     public static void cancel() {
@@ -87,6 +90,15 @@ public final class AuctionScanner {
             finish("Scan stopped because you left the server."); return;
         }
         if (waitTicks-- > 0) return;
+        if (reopenAfterPurchase) {
+            reopenAfterPurchase = false;
+            client.getNetworkHandler().sendChatCommand("ah");
+            observedListings.clear();
+            awaitingPageChange = false;
+            pendingFingerprint = "";
+            waitTicks = 15;
+            return;
+        }
         if (!(client.currentScreen instanceof HandledScreen<?>)) {
             finish("Auction House closed. Scan stopped."); return;
         }
@@ -99,9 +111,9 @@ public final class AuctionScanner {
                 client.interactionManager.clickSlot(handler.syncId, confirmSlot, 0, SlotActionType.PICKUP, client.player);
                 awaitingBuyConfirmation = false;
                 attemptedBuys++;
-                autoBuyEnabled = false;
-                AuctionSniperClient.msg("Confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins.");
-                waitTicks = 5;
+                AuctionSniperClient.msg("Confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins. Continuing scan.");
+                reopenAfterPurchase = true;
+                waitTicks = 20;
                 return;
             }
             if (isAuctionBuyMenu(handler)) {
@@ -180,8 +192,12 @@ public final class AuctionScanner {
             return;
         }
 
-        finish("Full Auction House scan complete. Pages scanned: " + pages
-                + ", priced listings recorded: " + PriceTracker.pricedListings() + ".");
+        AuctionSniperClient.msg("Full Auction House pass complete. Restarting from page 1.");
+        client.getNetworkHandler().sendChatCommand("ah");
+        observedListings.clear();
+        awaitingPageChange = false;
+        pendingFingerprint = "";
+        waitTicks = 15;
     }
 
     private static int findConfirmBuySlot(ScreenHandler handler, long expectedPrice) {
