@@ -23,6 +23,9 @@ public final class AuctionScanner {
     private static boolean awaitingPageChange;
     private static boolean returningToFirstPage;
     private static boolean autoBuyEnabled;
+    private static boolean awaitingBuyConfirmation;
+    private static long pendingBuyPrice;
+    private static String pendingBuyName = "";
     private static int attemptedBuys;
     private static final int MAX_BUYS_PER_SCAN = 1;
     private static final int PREVIOUS_PAGE_SLOT = 45;
@@ -62,6 +65,9 @@ public final class AuctionScanner {
         returningToFirstPage = false;
         pendingFingerprint = "";
         attemptedBuys = 0;
+        awaitingBuyConfirmation = false;
+        pendingBuyPrice = 0;
+        pendingBuyName = "";
         attemptedListings.clear();
         observedListings.clear();
         client.getNetworkHandler().sendChatCommand("ah");
@@ -84,6 +90,26 @@ public final class AuctionScanner {
         }
         ScreenHandler handler = client.player.currentScreenHandler;
         int listingSlots = Math.max(0, handler.slots.size() - 36);
+
+        if (awaitingBuyConfirmation) {
+            int confirmSlot = findConfirmBuySlot(handler, pendingBuyPrice);
+            if (confirmSlot >= 0 && client.interactionManager != null) {
+                client.interactionManager.clickSlot(handler.syncId, confirmSlot, 0, SlotActionType.PICKUP, client.player);
+                awaitingBuyConfirmation = false;
+                attemptedBuys++;
+                autoBuyEnabled = false;
+                AuctionSniperClient.msg("Confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins.");
+                waitTicks = 20;
+                return;
+            }
+            if (isAuctionBuyMenu(handler)) {
+                // Confirmation menu is present, but its price or button did not match exactly.
+                finish("Purchase not confirmed: could not verify the green Confirm Buy button and exact price.");
+                return;
+            }
+            finish("Purchase stopped: confirmation menu was not recognized.");
+            return;
+        }
 
         if (!sortConfigured) {
             if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size()
@@ -153,9 +179,15 @@ public final class AuctionScanner {
                     && average - price >= AuctionSniperClient.SETTINGS.minimumProfit
                     && isSafeListingName(itemName)
                     && attemptedListings.add(key + "|" + price)) {
-                AuctionSniperClient.msg("Found possible deal: " + itemName + " for " + price
-                        + " (average " + average + "). Auto-buy is paused for manual confirmation.");
-                autoBuyEnabled = false;
+                if (client.interactionManager != null) {
+                    pendingBuyPrice = price;
+                    pendingBuyName = itemName;
+                    awaitingBuyConfirmation = true;
+                    client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
+                    waitTicks = 15;
+                    AuctionSniperClient.msg("Opening purchase confirmation for " + itemName + " at " + price + " coins.");
+                    return;
+                }
             }
             if (fresh) PriceTracker.observe(key, price);
             AuctionSniperClient.msg("Page " + (pages + 1) + " | " + itemName + " | " + price + " coins");
@@ -192,6 +224,41 @@ public final class AuctionScanner {
             waitTicks = 10;
             AuctionSniperClient.msg("Already at page 1. Next sort: " + SORT_MODES[sortModeIndex] + ".");
         }
+    }
+
+    private static int findConfirmBuySlot(ScreenHandler handler, long expectedPrice) {
+        for (int i = 0; i < handler.slots.size(); i++) {
+            ItemStack stack = handler.slots.get(i).getStack();
+            if (stack.isEmpty()) continue;
+            StringBuilder text = new StringBuilder(stack.getName().getString());
+            var lore = stack.get(net.minecraft.component.DataComponentTypes.LORE);
+            if (lore != null) {
+                for (net.minecraft.text.Text line : lore.lines()) text.append(" ").append(line.getString());
+            }
+            String value = text.toString().toLowerCase(java.util.Locale.ROOT);
+            if (!value.contains("confirm buy")) continue;
+            if (!value.contains("click to purchase")) continue;
+            if (!value.contains(Long.toString(expectedPrice))) continue;
+            return i;
+        }
+        return -1;
+    }
+
+    private static boolean isAuctionBuyMenu(ScreenHandler handler) {
+        for (int i = 0; i < handler.slots.size(); i++) {
+            ItemStack stack = handler.slots.get(i).getStack();
+            if (stack.isEmpty()) continue;
+            String name = stack.getName().getString().toLowerCase(java.util.Locale.ROOT);
+            if (name.contains("confirm buy") || name.contains("cancel buy")) return true;
+            var lore = stack.get(net.minecraft.component.DataComponentTypes.LORE);
+            if (lore != null) {
+                for (net.minecraft.text.Text line : lore.lines()) {
+                    String value = line.getString().toLowerCase(java.util.Locale.ROOT);
+                    if (value.contains("confirm buy") || value.contains("cancel buy")) return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static int navigationSlot(ScreenHandler handler, int slot) {
