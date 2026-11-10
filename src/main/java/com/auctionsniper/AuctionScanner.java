@@ -18,7 +18,7 @@ public final class AuctionScanner {
     private static String lastFingerprint = "";
     private static boolean sortConfigured;
     private static int sortModeIndex;
-    private static final String[] SORT_MODES = {"Highest Price", "Lowest Price"};
+
     private static String pendingFingerprint = "";
     private static boolean awaitingPageChange;
     private static int pageChangeWaitRetries;
@@ -113,23 +113,8 @@ public final class AuctionScanner {
             return;
         }
 
-        if (!sortConfigured) {
-            if (SORT_ITEMS_SLOT >= listingSlots || SORT_ITEMS_SLOT >= handler.slots.size()
-                    || handler.slots.get(SORT_ITEMS_SLOT).getStack().isEmpty()) {
-                finish("Could not safely identify Sort Items in slot 49."); return;
-            }
-            if (sortModeIndex > 0) {
-                if (client.interactionManager == null) { finish("Could not change sort mode."); return; }
-                client.interactionManager.clickSlot(handler.syncId, SORT_ITEMS_SLOT, 0, SlotActionType.PICKUP, client.player);
-                sortConfigured = true;
-                waitTicks = 8;
-                lastFingerprint = "";
-                AuctionSniperClient.msg("Changing sort to " + SORT_MODES[sortModeIndex] + ".");
-                return;
-            }
-            sortConfigured = true;
-            AuctionSniperClient.msg("Scanning sort mode: " + SORT_MODES[sortModeIndex] + ".");
-        }
+        // Full Auction House scan: never interact with the sort control.
+        sortConfigured = true;
 
         String fingerprint = fingerprint(handler);
         if (awaitingPageChange) {
@@ -145,26 +130,6 @@ public final class AuctionScanner {
             awaitingPageChange = false;
             pageChangeWaitRetries = 0;
             pendingFingerprint = "";
-        }
-
-        if (returningToFirstPage) {
-            int previous = navigationSlot(handler, PREVIOUS_PAGE_SLOT);
-            if (previous >= 0) {
-                if (client.interactionManager == null) { finish("Could not return to the first Auction House page."); return; }
-                pendingFingerprint = fingerprint;
-                awaitingPageChange = true;
-                client.interactionManager.clickSlot(handler.syncId, previous, 0, SlotActionType.PICKUP, client.player);
-                waitTicks = 6;
-                AuctionSniperClient.msg("Moving back toward page 1 before changing sort.");
-                return;
-            }
-            returningToFirstPage = false;
-            sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
-            sortConfigured = false;
-            lastFingerprint = "";
-            waitTicks = 10;
-            AuctionSniperClient.msg("Back at page 1. Next sort: " + SORT_MODES[sortModeIndex] + ".");
-            return;
         }
 
         int found = 0;
@@ -215,23 +180,8 @@ public final class AuctionScanner {
             return;
         }
 
-        returningToFirstPage = true;
-        int previous = navigationSlot(handler, PREVIOUS_PAGE_SLOT);
-        if (previous >= 0) {
-            if (client.interactionManager == null) { finish("Could not return to the first Auction House page."); return; }
-            pendingFingerprint = fingerprint;
-            awaitingPageChange = true;
-            client.interactionManager.clickSlot(handler.syncId, previous, 0, SlotActionType.PICKUP, client.player);
-            waitTicks = 15;
-            AuctionSniperClient.msg("Reached the last page. Returning to page 1 before changing sort.");
-        } else {
-            returningToFirstPage = false;
-            sortModeIndex = (sortModeIndex + 1) % SORT_MODES.length;
-            sortConfigured = false;
-            lastFingerprint = "";
-            waitTicks = 10;
-            AuctionSniperClient.msg("Already at page 1. Next sort: " + SORT_MODES[sortModeIndex] + ".");
-        }
+        finish("Full Auction House scan complete. Pages scanned: " + pages
+                + ", priced listings recorded: " + PriceTracker.pricedListings() + ".");
     }
 
     private static int findConfirmBuySlot(ScreenHandler handler, long expectedPrice) {
