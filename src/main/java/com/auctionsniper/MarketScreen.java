@@ -1,6 +1,7 @@
 package com.auctionsniper;
 
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 
@@ -220,8 +221,11 @@ public final class MarketScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
+    public boolean mouseClicked(Click click, boolean doubled) {
+        double mouseX = click.x();
+        double mouseY = click.y();
+        int button = click.button();
+        if (button != 0) return super.mouseClicked(click, doubled);
         int margin = Math.max(12, (width - 1000) / 2);
         int left = margin, right = width - margin;
         int top = Math.max(10, (height - 590) / 2);
@@ -246,7 +250,7 @@ public final class MarketScreen extends Screen {
             close();
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(click, doubled);
     }
 
     @Override
