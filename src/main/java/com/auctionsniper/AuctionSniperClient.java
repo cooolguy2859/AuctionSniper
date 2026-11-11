@@ -150,7 +150,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
+                    msg("/ahsniper scan | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
             )
