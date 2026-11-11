@@ -13,12 +13,19 @@ import java.util.Map;
 /** Custom AuctionSniper market dashboard, styled after the supplied dark navy/cyan references. */
 public final class MarketScreen extends Screen {
     private static final String[] TABS = {"Today", "Stock", "Market", "Buy", "Sell", "Calc", "History", "Worth", "Board", "Shop", "Style"};
-    private static final int BG = 0xFF101F29;
-    private static final int PANEL = 0xFF1B3440;
-    private static final int PANEL_DARK = 0xFF122630;
-    private static final int CYAN = 0xFF36D7F2;
-    private static final int MUTED = 0xFF83AAB8;
-    private static final int GREEN = 0xFF35E58A;
+    private static int BG = 0xFF101F29;
+    private static int PANEL = 0xFF1B3440;
+    private static int PANEL_DARK = 0xFF122630;
+    private static int CYAN = 0xFF36D7F2;
+    private static int MUTED = 0xFF83AAB8;
+    private static int GREEN = 0xFF35E58A;
+    private static void applyTheme() {
+        switch (AuctionSniperClient.SETTINGS.theme) {
+            case 1 -> { BG = 0xFF171923; PANEL = 0xFF292D3B; PANEL_DARK = 0xFF202432; CYAN = 0xFFB49AFF; MUTED = 0xFFA7A9C0; GREEN = 0xFF76D6A2; }
+            case 2 -> { BG = 0xFF17251D; PANEL = 0xFF263B2D; PANEL_DARK = 0xFF1D3024; CYAN = 0xFFA7E36A; MUTED = 0xFFA4BBA8; GREEN = 0xFF75E0A0; }
+            default -> { BG = 0xFF101F29; PANEL = 0xFF1B3440; PANEL_DARK = 0xFF122630; CYAN = 0xFF36D7F2; MUTED = 0xFF83AAB8; GREEN = 0xFF35E58A; }
+        }
+    }
     private int selectedTab = 1;
     private int selectedItem;
     private int scroll;
@@ -75,6 +82,7 @@ public final class MarketScreen extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        applyTheme();
         this.renderBackground(ctx, mouseX, mouseY, delta);
         refresh();
         int margin = Math.max(12, (width - 1000) / 2);
@@ -175,14 +183,31 @@ public final class MarketScreen extends Screen {
         }
     }
 
+    private int bottomSafe(int y) { return y + 280; }
+
     private void drawWorth(DrawContext ctx, int x, int y, int w) {
-        text(ctx, "NET WORTH OVERVIEW", x + 18, y + 76, CYAN);
-        text(ctx, "Your known balance: " + (AuctionSniperClient.getOwnBalance() < 0 ? "Not detected" : money(AuctionSniperClient.getOwnBalance()) + " coins"), x + 18, y + 108, 0xFFFFFFFF);
-        text(ctx, "Estimated inventory value: " + money(MarketData.inventoryValue()), x + 18, y + 132, GREEN);
-        text(ctx, "Saved item price records: " + PriceTracker.pricedListings(), x + 18, y + 154, MUTED);
-        text(ctx, "Captured order entries: " + MarketData.orders().size(), x + 18, y + 176, MUTED);
-        text(ctx, "Captured market entries: " + MarketData.market().size(), x + 18, y + 198, MUTED);
-        text(ctx, "Other-player wealth is not included in this estimate.", x + 18, y + 224, MUTED);
+        if (selectedTab == 8) {
+            text(ctx, "PLAYER BALANCE LEADERBOARD", x + 18, y + 76, CYAN);
+            var leaders = new ArrayList<>(AuctionSniperClient.BALANCES.snapshot().entrySet());
+            leaders.sort(Map.Entry.<String, Long>comparingByValue().reversed());
+            if (leaders.isEmpty()) text(ctx, "No player balances captured yet. Use /ahsniper balance refresh.", x + 18, y + 108, MUTED);
+            int line = 0;
+            for (var entry : leaders) {
+                if (line >= 14) break;
+                text(ctx, (line + 1) + ". " + entry.getKey() + " — " + money(entry.getValue()), x + 18, y + 108 + line * 22, line == 0 ? GREEN : 0xFFFFFFFF);
+                line++;
+            }
+            text(ctx, "Only balances actually seen in chat are shown.", x + 18, bottomSafe(y) , MUTED);
+            return;
+        }
+        text(ctx, "KNOWN NET WORTH ESTIMATE", x + 18, y + 76, CYAN);
+        text(ctx, "Your balance: " + (AuctionSniperClient.getOwnBalance() < 0 ? "Not detected" : money(AuctionSniperClient.getOwnBalance()) + " coins"), x + 18, y + 108, 0xFFFFFFFF);
+        text(ctx, "Estimated inventory: " + money(MarketData.inventoryValue()), x + 18, y + 132, GREEN);
+        text(ctx, "Known total: " + (AuctionSniperClient.getOwnBalance() < 0 ? "Partial — balance unknown" : money(MarketData.knownNetWorth()) + " coins"), x + 18, y + 160, CYAN);
+        text(ctx, "Saved item price records: " + PriceTracker.pricedListings(), x + 18, y + 190, MUTED);
+        text(ctx, "Captured order entries: " + MarketData.orders().size(), x + 18, y + 212, MUTED);
+        text(ctx, "Captured market entries: " + MarketData.market().size(), x + 18, y + 234, MUTED);
+        text(ctx, "AH listings, Ender Chest and shulkers are not included.", x + 18, y + 260, MUTED);
     }
 
     private void drawInfo(DrawContext ctx, int x, int y, int w, int bottom, String tab) {
@@ -193,12 +218,16 @@ public final class MarketScreen extends Screen {
             case "Sell" -> "Use saved AH price history to value items before listing.";
             case "Calc" -> "Estimated inventory value: " + money(MarketData.inventoryValue());
             case "Shop" -> "Server shop entries captured: " + MarketData.market().size();
-            case "Style" -> "Cyan / navy theme active. More themes can be added here.";
+            case "Style" -> "Theme " + (AuctionSniperClient.SETTINGS.theme + 1) + " of 3. Click the theme button below to switch.";
             case "Today" -> "Price observations: " + PriceTracker.pricedListings() + " | alerts: " + MarketData.alertCount();
             default -> "Saved item prices and market statistics.";
         };
         text(ctx, detail, x + 18, y + 108, 0xFFFFFFFF);
         text(ctx, "Open /orders or /market to collect menu prices.", x + 18, y + 136, MUTED);
+        if (tab.equals("Style")) {
+            ctx.fill(x + 18, y + 166, x + 190, y + 198, PANEL);
+            text(ctx, "CHANGE THEME", x + 32, y + 178, CYAN);
+        }
         List<MarketData.Entry> captured = tab.equals("Market") || tab.equals("Shop")
                 ? MarketData.market() : MarketData.orders();
         if (tab.equals("Buy") || tab.equals("Sell") || tab.equals("Market") || tab.equals("Shop")) {
@@ -254,6 +283,12 @@ public final class MarketScreen extends Screen {
         int mainW = (right - left) * 68 / 100;
         int sideX = left + 12 + mainW + 12;
         int sideW = right - sideX - 12;
+        if (selectedTab == 10 && mouseX >= left + 30 && mouseX <= left + 210 && mouseY >= contentTop + 166 && mouseY <= contentTop + 198) {
+            AuctionSniperClient.SETTINGS.theme = (AuctionSniperClient.SETTINGS.theme + 1) % 3;
+            AuctionSniperClient.SETTINGS.save();
+            applyTheme();
+            return true;
+        }
         int rowY = contentTop + 54;
         if (mouseX >= sideX && mouseX <= sideX + sideW && mouseY >= rowY - 3 && mouseY < bottom - 50) {
             int index = scroll + (int) ((mouseY - rowY) / 27);
