@@ -207,14 +207,15 @@ public final class MarketScreen extends Screen {
         text(ctx, "Saved item price records: " + PriceTracker.pricedListings(), x + 18, y + 190, MUTED);
         text(ctx, "Captured order entries: " + MarketData.orders().size(), x + 18, y + 212, MUTED);
         text(ctx, "Captured market entries: " + MarketData.market().size(), x + 18, y + 234, MUTED);
-        text(ctx, "AH listings, Ender Chest and shulkers are not included.", x + 18, y + 260, MUTED);
+        text(ctx, "AH listings seen: " + MarketData.auctionListings().size() + " (est. " + money(MarketData.auctionListingValue()) + ")", x + 18, y + 260, MUTED);
+        text(ctx, "Ender Chest seen: " + MarketData.enderChestValue() + " coins. Shulkers need opened contents.", x + 18, y + 280, MUTED);
     }
 
     private void drawInfo(DrawContext ctx, int x, int y, int w, int bottom, String tab) {
         text(ctx, tab.toUpperCase(java.util.Locale.ROOT), x + 18, y + 78, CYAN);
         String detail = switch (tab) {
-            case "Market" -> "Captured /market prices: " + MarketData.market().size();
-            case "Buy" -> "Captured /orders entries: " + MarketData.orders().size();
+            case "Market" -> "Captured /market prices: " + MarketData.market().size() + " | AH listings: " + MarketData.auctionListings().size();
+            case "Buy" -> "Captured /orders entries: " + MarketData.orders().size() + " (menu capture only)";
             case "Sell" -> "Use saved AH price history to value items before listing.";
             case "Calc" -> "Estimated inventory value: " + money(MarketData.inventoryValue());
             case "Shop" -> "Server shop entries captured: " + MarketData.market().size();
