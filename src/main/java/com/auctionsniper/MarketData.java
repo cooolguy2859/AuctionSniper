@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  */
 public final class MarketData {
     public record Entry(String item, long price, String source) {}
-    private static final Pattern MONEY = Pattern.compile("(?i)(?:price|cost|amount|buy order|sell order|\u0024)\\s*[:=]?\\s*\\$?([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(k|m|b)?");
+    private static final Pattern MONEY = Pattern.compile("(?i)(?:price|cost|amount|buy order|sell order|\\$)\\s*[:=]?\\s*\\$?([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(k|m|b)?");
     private static final Map<String, Entry> ORDERS = new LinkedHashMap<>();
     private static final Map<String, Entry> MARKET = new LinkedHashMap<>();
     private static final List<String> ALERTS = new ArrayList<>();
