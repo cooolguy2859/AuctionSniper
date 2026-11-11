@@ -114,6 +114,12 @@ public final class PriceTracker {
         return values == null || values.isEmpty() ? null : values.stream().mapToLong(Long::longValue).max().orElse(0);
     }
 
+    public static Map<String, List<Long>> snapshot() {
+        Map<String, List<Long>> copy = new java.util.LinkedHashMap<>();
+        HISTORY.forEach((key, values) -> copy.put(key, List.copyOf(values)));
+        return copy;
+    }
+
     public static int pricedListings() { return pricedListings; }
 
     private static void save() {
