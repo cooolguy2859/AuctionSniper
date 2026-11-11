@@ -75,8 +75,7 @@ public final class AuctionScanner {
         attemptedListings.clear();
         observedListings.clear();
         client.getNetworkHandler().sendChatCommand("ah");
-        autoBuyEnabled = true;
-        AuctionSniperClient.msg("Continuous Auction House scan and auto-buy enabled; budget and profit checks apply.");
+        AuctionSniperClient.msg("Continuous Auction House scan started. Auto-buy stays off unless you enable it with /ahsniper autobuy on.");
     }
 
     public static void cancel() {
@@ -180,6 +179,7 @@ public final class AuctionScanner {
 
         pages++;
         totalListings += found;
+        PriceTracker.flush();
         AuctionSniperClient.msg("Page " + pages + " scanned: " + found + " priced listings.");
 
         int next = navigationSlot(handler, NEXT_PAGE_SLOT);
