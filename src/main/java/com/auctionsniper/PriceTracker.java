@@ -27,6 +27,7 @@ public final class PriceTracker {
             "(?i)^\\s*price\\s*:\\s*(?:\\$)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:coins?)?\\s*$");
     private static final Map<String, List<Long>> HISTORY = new HashMap<>();
     private static int pricedListings;
+    private static boolean dirty;
 
     private PriceTracker() {}
 
@@ -83,7 +84,7 @@ public final class PriceTracker {
         values.add(price);
         if (values.size() > 100) values.remove(0);
         pricedListings++;
-        save();
+        dirty = true;
     }
 
     public static int sampleCount(String key) { return HISTORY.getOrDefault(key, List.of()).size(); }
@@ -121,6 +122,13 @@ public final class PriceTracker {
     }
 
     public static int pricedListings() { return pricedListings; }
+
+    /** Persist observations in one batch after a page is scanned. */
+    public static void flush() {
+        if (!dirty) return;
+        save();
+        dirty = false;
+    }
 
     private static void save() {
         Properties properties = new Properties();
