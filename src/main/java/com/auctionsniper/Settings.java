@@ -6,7 +6,7 @@ import java.nio.file.*;
 public final class Settings {
     public String mode = "manual";
     public long minimumProfit = 200_000;
-    public long maxBudget = 50_000_000;
+    public long maxBudget = 200_000;
     public boolean showHud = true;
     public int theme = 0;\n    public String cloudApiUrl = "https://auction-sniper-api.firewolfjm10.workers.dev";\n    public String cloudApiKey = "";\n    public String serverId = "lifesteal.net";
 
