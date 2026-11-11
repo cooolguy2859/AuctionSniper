@@ -139,6 +139,10 @@ public final class MarketData {
     }
 
     public static long inventoryValue() { return inventoryValue; }
+    public static long knownNetWorth() {
+        long balance = AuctionSniperClient.getOwnBalance();
+        return balance < 0 ? inventoryValue : safeAdd(balance, inventoryValue);
+    }
     public static List<Entry> orders() { return new ArrayList<>(ORDERS.values()); }
     public static List<Entry> market() { return new ArrayList<>(MARKET.values()); }
     public static int alertCount() { return ALERTS.size(); }
