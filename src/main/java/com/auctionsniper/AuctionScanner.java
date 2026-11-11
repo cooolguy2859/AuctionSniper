@@ -191,9 +191,9 @@ public final class AuctionScanner {
             String key = PriceTracker.itemKey(stack);
             String observation = fingerprint + "|" + i + "|" + key + "|" + price;
             boolean fresh = observedListings.add(observation);
-            Long average = PriceTracker.average(key);
+            Long average = PriceTracker.average(key);\n            MarketApi.RemotePrice sharedPrice = MarketApi.price(key);\n            if (average == null && sharedPrice != null) average = sharedPrice.average();
             if (fresh && autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
-                    && PriceTracker.sampleCount(key) >= 8 && average != null
+                    && (PriceTracker.sampleCount(key) >= 8 || (sharedPrice != null && sharedPrice.samples() >= 8)) && average != null
                     && price <= AuctionSniperClient.SETTINGS.maxBudget
                     && AuctionSniperClient.getOwnBalance() >= price
                     && average > price
@@ -210,7 +210,7 @@ public final class AuctionScanner {
                     return;
                 }
             }
-            if (fresh) PriceTracker.observe(key, price);
+            if (fresh) {\n                PriceTracker.observe(key, price);\n                MarketApi.observe(key, itemName, price);\n            }
         }
 
         pages++;
