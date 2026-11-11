@@ -178,24 +178,39 @@ public final class MarketScreen extends Screen {
     private void drawWorth(DrawContext ctx, int x, int y, int w) {
         text(ctx, "NET WORTH OVERVIEW", x + 18, y + 76, CYAN);
         text(ctx, "Your known balance: " + (AuctionSniperClient.getOwnBalance() < 0 ? "Not detected" : money(AuctionSniperClient.getOwnBalance()) + " coins"), x + 18, y + 108, 0xFFFFFFFF);
-        text(ctx, "Saved item price records: " + PriceTracker.pricedListings(), x + 18, y + 132, MUTED);
-        text(ctx, "AH listing value and inventory value will appear when collected.", x + 18, y + 166, MUTED);
-        text(ctx, "Other players' totals require readable /bal and AH data.", x + 18, y + 188, MUTED);
+        text(ctx, "Estimated inventory value: " + money(MarketData.inventoryValue()), x + 18, y + 132, GREEN);
+        text(ctx, "Saved item price records: " + PriceTracker.pricedListings(), x + 18, y + 154, MUTED);
+        text(ctx, "Captured order entries: " + MarketData.orders().size(), x + 18, y + 176, MUTED);
+        text(ctx, "Captured market entries: " + MarketData.market().size(), x + 18, y + 198, MUTED);
+        text(ctx, "Other-player wealth is not included in this estimate.", x + 18, y + 224, MUTED);
     }
 
     private void drawInfo(DrawContext ctx, int x, int y, int w, int bottom, String tab) {
         text(ctx, tab.toUpperCase(java.util.Locale.ROOT), x + 18, y + 78, CYAN);
         String detail = switch (tab) {
-            case "Market" -> "Server /market prices can be compared when their menu data is available.";
-            case "Buy" -> "Compare saved AH prices with live /orders buy offers.";
-            case "Sell" -> "Compare held items with current AH and /market prices.";
-            case "Calc" -> "Use saved average prices to estimate item totals.";
-            case "Shop" -> "Cosmetic themes and extras are not connected yet.";
-            case "Style" -> "Cyan / navy dashboard theme is active.";
-            default -> "Saved item prices and market statistics will appear here.";
+            case "Market" -> "Captured /market prices: " + MarketData.market().size();
+            case "Buy" -> "Captured /orders entries: " + MarketData.orders().size();
+            case "Sell" -> "Use saved AH price history to value items before listing.";
+            case "Calc" -> "Estimated inventory value: " + money(MarketData.inventoryValue());
+            case "Shop" -> "Server shop entries captured: " + MarketData.market().size();
+            case "Style" -> "Cyan / navy theme active. More themes can be added here.";
+            case "Today" -> "Price observations: " + PriceTracker.pricedListings() + " | alerts: " + MarketData.alertCount();
+            default -> "Saved item prices and market statistics.";
         };
         text(ctx, detail, x + 18, y + 108, 0xFFFFFFFF);
-        text(ctx, "Data is only shown after AuctionSniper has collected it.", x + 18, y + 136, MUTED);
+        text(ctx, "Open /orders or /market to collect menu prices.", x + 18, y + 136, MUTED);
+        List<MarketData.Entry> captured = tab.equals("Market") || tab.equals("Shop")
+                ? MarketData.market() : MarketData.orders();
+        if (tab.equals("Buy") || tab.equals("Sell") || tab.equals("Market") || tab.equals("Shop")) {
+            int lineY = y + 164;
+            int shown = 0;
+            for (MarketData.Entry entry : captured) {
+                if (shown++ >= 8) break;
+                text(ctx, entry.item() + "  —  " + money(entry.price()), x + 18, lineY, GREEN);
+                lineY += 18;
+            }
+            if (captured.isEmpty()) text(ctx, "No menu prices captured yet.", x + 18, lineY, MUTED);
+        }
     }
 
     private void drawSide(DrawContext ctx, int x, int y, int w, int bottom, int mouseX, int mouseY) {
