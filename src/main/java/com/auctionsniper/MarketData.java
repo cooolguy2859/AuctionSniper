@@ -30,6 +30,8 @@ public final class MarketData {
     private static final Pattern MONEY = Pattern.compile("(?i)(?:price|cost|amount|buy order|sell order|\\$)\\s*[:=]?\\s*\\$?([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(k|m|b)?");
     private static final Map<String, Entry> ORDERS = new LinkedHashMap<>();
     private static final Map<String, Entry> MARKET = new LinkedHashMap<>();
+    private static final Map<String, Entry> AUCTION_LISTINGS = new LinkedHashMap<>();
+    private static final Map<String, Entry> ENDER_CHEST = new LinkedHashMap<>();
     private static final List<String> ALERTS = new ArrayList<>();
     private static long inventoryValue;
     private static long lastAlertTick;
@@ -65,9 +67,11 @@ public final class MarketData {
         String lower = title.toLowerCase(Locale.ROOT);
         boolean orderMenu = lower.contains("order");
         boolean marketMenu = lower.contains("market") || lower.contains("shop");
-        if (!orderMenu && !marketMenu) return;
-        Map<String, Entry> target = orderMenu ? ORDERS : MARKET;
-        String source = orderMenu ? "orders" : "market";
+        boolean auctionMenu = lower.contains("auction") || lower.equals("ah") || lower.contains("auction house");
+        boolean enderMenu = lower.contains("ender chest") || lower.contains("enderchest");
+        if (!orderMenu && !marketMenu && !auctionMenu && !enderMenu) return;
+        Map<String, Entry> target = orderMenu ? ORDERS : marketMenu ? MARKET : auctionMenu ? AUCTION_LISTINGS : ENDER_CHEST;
+        String source = orderMenu ? "orders" : marketMenu ? "market" : auctionMenu ? "auction" : "ender chest";
         boolean changed = false;
         int limit = Math.max(0, handler.slots.size() - 36);
         for (int i = 0; i < limit; i++) {
@@ -145,6 +149,14 @@ public final class MarketData {
     }
     public static List<Entry> orders() { return new ArrayList<>(ORDERS.values()); }
     public static List<Entry> market() { return new ArrayList<>(MARKET.values()); }
+    public static List<Entry> auctionListings() { return new ArrayList<>(AUCTION_LISTINGS.values()); }
+    public static long auctionListingValue() { return totalValue(AUCTION_LISTINGS); }
+    public static long enderChestValue() { return totalValue(ENDER_CHEST); }
+    private static long totalValue(Map<String, Entry> entries) {
+        long total = 0;
+        for (Entry entry : entries.values()) total = safeAdd(total, entry.price());
+        return total;
+    }
     public static int alertCount() { return ALERTS.size(); }
 
     private static long safeAdd(long a, long b) {
@@ -163,6 +175,8 @@ public final class MarketData {
             p.load(in);
             readEntries(p, "orders.", ORDERS, "orders");
             readEntries(p, "market.", MARKET, "market");
+            readEntries(p, "auction.", AUCTION_LISTINGS, "auction");
+            readEntries(p, "ender.", ENDER_CHEST, "ender chest");
             for (String key : p.stringPropertyNames()) if (key.startsWith("alert.")) ALERTS.add(p.getProperty(key));
         } catch (Exception e) {
             AuctionSniperClient.msg("Could not load market data: " + e.getMessage());
@@ -184,6 +198,8 @@ public final class MarketData {
         Properties p = new Properties();
         writeEntries(p, "orders.", ORDERS);
         writeEntries(p, "market.", MARKET);
+        writeEntries(p, "auction.", AUCTION_LISTINGS);
+        writeEntries(p, "ender.", ENDER_CHEST);
         for (int i = 0; i < ALERTS.size(); i++) p.setProperty("alert." + i, ALERTS.get(i));
         try {
             Files.createDirectories(file().getParent());
