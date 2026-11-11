@@ -1,0 +1,2 @@
+apikey=${market_api_key}
+apibase=${market_api_base}

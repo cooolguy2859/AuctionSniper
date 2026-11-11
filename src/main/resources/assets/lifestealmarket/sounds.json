@@ -1,0 +1,14 @@
+{
+  "soft_click": {
+    "subtitle": "Lifesteal Market: soft click",
+    "sounds": [ { "name": "lifestealmarket:soft_click", "stream": false } ]
+  },
+  "ui_click": {
+    "subtitle": "Lifesteal Market: UI click",
+    "sounds": [ { "name": "lifestealmarket:ui_click", "stream": false } ]
+  },
+  "drip": {
+    "subtitle": "Lifesteal Market: drip",
+    "sounds": [ { "name": "lifestealmarket:drip", "stream": false } ]
+  }
+}

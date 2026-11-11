@@ -3,21 +3,10 @@
   "id": "auction_sniper",
   "version": "${version}",
   "name": "AuctionSniper",
-  "description": "Client-side auction listing scanner and deal review helper.",
+  "description": "Auction sniper and full Lifesteal market toolkit with charts, price history, net worth, alerts, and shared market data.",
   "environment": "client",
-  "entrypoints": {
-    "client": [
-      "com.auctionsniper.AuctionSniperClient"
-    ]
-  },
-  "depends": {
-    "fabricloader": ">=0.18.1",
-    "minecraft": "~1.21.11",
-    "java": ">=21",
-    "fabric-api": "*"
-  },
-  "authors": [
-    "AuctionSniper contributors",
-    "Lifesteal Market by rizzuku (used with permission)"
-  ]
+  "entrypoints": { "client": ["com.auctionsniper.AuctionSniperClient", "com.lifestealmarket.LifestealMarketClient"] },
+  "mixins": [{ "config": "lifestealmarket.client.mixins.json", "environment": "client" }],
+  "depends": { "fabricloader": ">=0.19.3", "minecraft": "~1.21.11", "java": ">=21", "fabric-api": "*" },
+  "authors": ["AuctionSniper contributors", "TheyHating", "rizzuku"]
 }

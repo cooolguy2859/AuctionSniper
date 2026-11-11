@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "com.lifestealmarket.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"MinecraftClientMixin",
+		"SoundManagerMixin",
+		"PlayerNameMixin",
+		"PlayerListHudAccessor",
+		"ServerCommandsMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
