@@ -52,7 +52,7 @@ public final class MarketData {
         for (ItemStack stack : client.player.getInventory().getMainStacks()) {
             if (stack.isEmpty()) continue;
             Long average = PriceTracker.average(PriceTracker.itemKey(stack));
-            if (average != null) inventoryValue = safeAdd(inventoryValue, average * stack.getCount());
+            if (average != null) inventoryValue = safeAdd(inventoryValue, safeMultiply(average, stack.getCount()));
         }
         if (client.currentScreen instanceof HandledScreen<?> screen) capture(screen.getTitle().getString(), client.player.currentScreenHandler);
         if (tick - lastAlertTick >= 40) {
@@ -145,6 +145,10 @@ public final class MarketData {
 
     private static long safeAdd(long a, long b) {
         try { return Math.addExact(a, b); } catch (ArithmeticException ignored) { return Long.MAX_VALUE; }
+    }
+
+    private static long safeMultiply(long a, int b) {
+        try { return Math.multiplyExact(a, (long) b); } catch (ArithmeticException ignored) { return Long.MAX_VALUE; }
     }
 
     private static void load() {
