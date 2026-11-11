@@ -275,6 +275,7 @@ public final class AuctionScanner {
     }
 
     private static void finish(String message) {
+        PriceTracker.flush();
         scanning = false;
         autoBuyEnabled = false;
         AuctionSniperClient.msg(message);
