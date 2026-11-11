@@ -26,6 +26,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
         SETTINGS.load();
         MarketDatabase.load();
         PriceTracker.load();
+        MarketData.initialize();
         AuctionScanner.initialize();
         BalanceOverlay.initialize();
 
@@ -69,6 +70,31 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     }))
                     .then(ClientCommandManager.literal("off").executes(context -> {
                         AuctionScanner.setAutoBuyEnabled(false);
+                        return 1;
+                    })))
+                .then(ClientCommandManager.literal("orders").executes(context -> {
+                    if (MinecraftClient.getInstance().getNetworkHandler() != null) {
+                        MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("orders");
+                        msg("Opening /orders. Keep the menu open briefly so AuctionSniper can record visible prices.");
+                    }
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("market").executes(context -> {
+                    if (MinecraftClient.getInstance().getNetworkHandler() != null) {
+                        MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("market");
+                        msg("Opening /market. Keep the menu open briefly so AuctionSniper can record visible prices.");
+                    }
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("alert")
+                    .then(ClientCommandManager.argument("amount", StringArgumentType.word()).executes(context -> {
+                        MinecraftClient client = MinecraftClient.getInstance();
+                        if (client.player == null) return 0;
+                        long amount = parseAmount(StringArgumentType.getString(context, "amount"));
+                        if (amount <= 0) { msg("Use /ahsniper alert <target price>, while holding the item."); return 0; }
+                        String item = client.player.getMainHandStack().getName().getString().toLowerCase(java.util.Locale.ROOT);
+                        if (client.player.getMainHandStack().isEmpty()) { msg("Hold the item you want an alert for."); return 0; }
+                        MarketData.addAlert(item, amount);
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("gui").executes(context -> {
@@ -124,7 +150,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | profit min <amount> | budget <amount|balance> | hud <true|false>");
+                    msg("/ahsniper scan | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
             )
