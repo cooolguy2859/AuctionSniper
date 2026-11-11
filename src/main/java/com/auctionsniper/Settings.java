@@ -25,7 +25,7 @@ public final class Settings {
             minimumProfit = parseLong(p.getProperty("minimumProfit"), minimumProfit);
             maxBudget = parseLong(p.getProperty("maxBudget"), maxBudget);
             showHud = Boolean.parseBoolean(p.getProperty("showHud", Boolean.toString(showHud)));
-            theme = Math.max(0, Math.min(2, parseLong(p.getProperty("theme"), theme)));
+            theme = (int) Math.max(0, Math.min(2, parseLong(p.getProperty("theme"), theme)));
         } catch (IOException e) {
             AuctionSniperClient.msg("Could not load config: " + e.getMessage());
         }
