@@ -1,6 +1,7 @@
 package com.auctionsniper;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
@@ -26,6 +27,9 @@ public final class AuctionScanner {
     private static boolean reopenAfterPurchase;
     private static boolean autoBuyEnabled;
     private static boolean awaitingBuyConfirmation;
+    private static boolean awaitingServerPurchaseResult;
+    private static int purchaseResultWait;
+    private static boolean purchaseSucceeded;
     private static long pendingBuyPrice;
     private static String pendingBuyName = "";
     private static int attemptedBuys;
@@ -38,7 +42,19 @@ public final class AuctionScanner {
 
     private AuctionScanner() {}
 
-    public static void initialize() { ClientTickEvents.END_CLIENT_TICK.register(AuctionScanner::tick); }
+    public static void initialize() {
+        ClientTickEvents.END_CLIENT_TICK.register(AuctionScanner::tick);
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!awaitingServerPurchaseResult) return;
+            String line = message.getString().toLowerCase(java.util.Locale.ROOT);
+            if (line.contains("purchase successful") || line.contains("you bought") || line.contains("successfully purchased") || line.contains("bought for")) {
+                purchaseSucceeded = true;
+            } else if (line.contains("not enough") || line.contains("purchase failed") || line.contains("already sold") || line.contains("no longer available")) {
+                purchaseSucceeded = false;
+                purchaseResultWait = 0;
+            }
+        });
+    }
     public static boolean isScanning() { return scanning; }
     public static int getPages() { return pages; }
     public static boolean isAutoBuyEnabled() { return autoBuyEnabled; }
@@ -70,6 +86,9 @@ public final class AuctionScanner {
         attemptedBuys = 0;
         reopenAfterPurchase = false;
         awaitingBuyConfirmation = false;
+        awaitingServerPurchaseResult = false;
+        purchaseSucceeded = false;
+        purchaseResultWait = 0;
         pendingBuyPrice = 0;
         pendingBuyName = "";
         attemptedListings.clear();
@@ -89,6 +108,22 @@ public final class AuctionScanner {
             finish("Scan stopped because you left the server."); return;
         }
         if (waitTicks-- > 0) return;
+        if (awaitingServerPurchaseResult) {
+            if (purchaseSucceeded) {
+                awaitingServerPurchaseResult = false;
+                attemptedBuys++;
+                AuctionSniperClient.msg("Server confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins.");
+                reopenAfterPurchase = true;
+                waitTicks = 20;
+                return;
+            }
+            if (--purchaseResultWait <= 0) {
+                awaitingServerPurchaseResult = false;
+                finish("Purchase result was not confirmed by server chat. Auto-buy stopped safely; check your inventory and balance.");
+                return;
+            }
+            return;
+        }
         if (reopenAfterPurchase) {
             reopenAfterPurchase = false;
             client.getNetworkHandler().sendChatCommand("ah");
@@ -109,10 +144,11 @@ public final class AuctionScanner {
             if (confirmSlot >= 0 && client.interactionManager != null) {
                 client.interactionManager.clickSlot(handler.syncId, confirmSlot, 0, SlotActionType.PICKUP, client.player);
                 awaitingBuyConfirmation = false;
-                attemptedBuys++;
-                AuctionSniperClient.msg("Confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins. Continuing scan.");
-                reopenAfterPurchase = true;
-                waitTicks = 20;
+                awaitingServerPurchaseResult = true;
+                purchaseSucceeded = false;
+                purchaseResultWait = 100;
+                AuctionSniperClient.msg("Confirmation clicked for " + pendingBuyName + ". Waiting for server result...");
+                waitTicks = 1;
                 return;
             }
             if (isAuctionBuyMenu(handler)) {
@@ -278,6 +314,7 @@ public final class AuctionScanner {
         PriceTracker.flush();
         scanning = false;
         autoBuyEnabled = false;
+        awaitingServerPurchaseResult = false;
         AuctionSniperClient.msg(message);
     }
 }
