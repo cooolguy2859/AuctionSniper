@@ -8,6 +8,7 @@ public final class Settings {
     public long minimumProfit = 200_000;
     public long maxBudget = 50_000_000;
     public boolean showHud = true;
+    public int theme = 0;
 
     private Path file() {
         return net.fabricmc.loader.api.FabricLoader.getInstance()
@@ -24,6 +25,7 @@ public final class Settings {
             minimumProfit = parseLong(p.getProperty("minimumProfit"), minimumProfit);
             maxBudget = parseLong(p.getProperty("maxBudget"), maxBudget);
             showHud = Boolean.parseBoolean(p.getProperty("showHud", Boolean.toString(showHud)));
+            theme = Math.max(0, Math.min(2, parseLong(p.getProperty("theme"), theme)));
         } catch (IOException e) {
             AuctionSniperClient.msg("Could not load config: " + e.getMessage());
         }
@@ -35,6 +37,7 @@ public final class Settings {
         p.setProperty("minimumProfit", Long.toString(minimumProfit));
         p.setProperty("maxBudget", Long.toString(maxBudget));
         p.setProperty("showHud", Boolean.toString(showHud));
+        p.setProperty("theme", Integer.toString(theme));
         try {
             Files.createDirectories(file().getParent());
             try (OutputStream out = Files.newOutputStream(file())) {
