@@ -72,7 +72,20 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         AuctionScanner.setAutoBuyEnabled(false);
                         return 1;
                     })))
-                .then(ClientCommandManager.literal("cloud")\n                    .then(ClientCommandManager.literal("status").executes(context -> {\n                        msg("Cloud market: " + (MarketApi.configured() ? "configured" : "API key missing")\n                                + " | shared items: " + MarketApi.cachedItems()\n                                + (MarketApi.lastError().isBlank() ? "" : " | last error: " + MarketApi.lastError()));\n                        return 1;\n                    }))\n                    .then(ClientCommandManager.literal("sync").executes(context -> {\n                        if (!MarketApi.configured()) { msg("Set cloudApiKey in config/auction-sniper.properties first."); return 0; }\n                        MarketApi.sync();\n                        msg("Refreshing shared market prices.");\n                        return 1;\n                    })))\n                .then(ClientCommandManager.literal("orders").executes(context -> {
+                .then(ClientCommandManager.literal("cloud")
+                    .then(ClientCommandManager.literal("status").executes(context -> {
+                        msg("Cloud market: " + (MarketApi.configured() ? "configured" : "API key missing")
+                                + " | shared items: " + MarketApi.cachedItems()
+                                + (MarketApi.lastError().isBlank() ? "" : " | last error: " + MarketApi.lastError()));
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("sync").executes(context -> {
+                        if (!MarketApi.configured()) { msg("Set cloudApiKey in config/auction-sniper.properties first."); return 0; }
+                        MarketApi.sync();
+                        msg("Refreshing shared market prices.");
+                        return 1;
+                    })))
+                .then(ClientCommandManager.literal("orders").executes(context -> {
                     if (MinecraftClient.getInstance().getNetworkHandler() != null) {
                         MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("orders");
                         msg("Opening /orders. Keep the menu open briefly so AuctionSniper can record visible prices.");
