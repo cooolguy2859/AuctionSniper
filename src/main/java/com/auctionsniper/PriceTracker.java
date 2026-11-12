@@ -26,6 +26,10 @@ public final class PriceTracker {
     private static final Pattern PRICE = Pattern.compile(
             "(?i)^\\s*price\\s*:\\s*(?:\\$)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:coins?)?\\s*$");
     private static final Map<String, List<Long>> HISTORY = new HashMap<>();
+    private static final Map<String, PurchaseRecord> PURCHASES = new java.util.LinkedHashMap<>();
+    public record PurchaseRecord(long quantity, long totalCost, long lastPaid) {
+        public long averagePaid() { return quantity <= 0 ? 0 : totalCost / quantity; }
+    }
     private static int pricedListings;
     private static boolean dirty;
 
@@ -38,6 +42,7 @@ public final class PriceTracker {
         try (InputStream in = Files.newInputStream(path)) {
             properties.load(in);
             HISTORY.clear();
+            PURCHASES.clear();
             pricedListings = 0;
             for (String property : properties.stringPropertyNames()) {
                 if (!property.startsWith("prices.")) continue;
@@ -52,6 +57,20 @@ public final class PriceTracker {
                 if (!values.isEmpty()) {
                     HISTORY.put(key, values);
                     pricedListings += values.size();
+                }
+            }
+            for (String property : properties.stringPropertyNames()) {
+                if (!property.startsWith("bought.")) continue;
+                String key = new String(Base64.getDecoder().decode(property.substring(7)), StandardCharsets.UTF_8);
+                String[] parts = properties.getProperty(property, "").split(",");
+                if (parts.length == 3) {
+                    try {
+                        long quantity = Long.parseLong(parts[0]);
+                        long totalCost = Long.parseLong(parts[1]);
+                        long lastPaid = Long.parseLong(parts[2]);
+                        if (quantity > 0 && totalCost >= 0 && lastPaid > 0)
+                            PURCHASES.put(key, new PurchaseRecord(quantity, totalCost, lastPaid));
+                    } catch (NumberFormatException ignored) { }
                 }
             }
         } catch (Exception e) {
@@ -88,6 +107,28 @@ public final class PriceTracker {
     }
 
     public static int sampleCount(String key) { return HISTORY.getOrDefault(key, List.of()).size(); }
+
+    /** Record only a purchase that the server explicitly confirmed. */
+    public static void recordPurchase(String key, long paid) {
+        if (key == null || key.isBlank() || paid <= 0) return;
+        PurchaseRecord old = PURCHASES.getOrDefault(key, new PurchaseRecord(0, 0, 0));
+        long quantity = old.quantity() == Long.MAX_VALUE ? Long.MAX_VALUE : old.quantity() + 1;
+        long total;
+        try { total = Math.addExact(old.totalCost(), paid); }
+        catch (ArithmeticException overflow) { total = Long.MAX_VALUE; }
+        PURCHASES.put(key, new PurchaseRecord(quantity, total, paid));
+        dirty = true;
+        flush();
+    }
+
+    public static Map<String, PurchaseRecord> purchases() {
+        return new java.util.LinkedHashMap<>(PURCHASES);
+    }
+
+    public static Long latest(String key) {
+        List<Long> values = HISTORY.get(key);
+        return values == null || values.isEmpty() ? null : values.get(values.size() - 1);
+    }
 
     public static Long average(String key) {
         List<Long> values = HISTORY.get(key);
@@ -143,6 +184,9 @@ public final class PriceTracker {
             properties.setProperty("prices." + Base64.getEncoder().encodeToString(key.getBytes(StandardCharsets.UTF_8)),
                     joined.toString());
         });
+        PURCHASES.forEach((key, record) -> properties.setProperty(
+                "bought." + Base64.getEncoder().encodeToString(key.getBytes(StandardCharsets.UTF_8)),
+                record.quantity() + "," + record.totalCost() + "," + record.lastPaid()));
         try {
             Files.createDirectories(file().getParent());
             try (OutputStream out = Files.newOutputStream(file())) {
