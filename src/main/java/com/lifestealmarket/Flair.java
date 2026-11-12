@@ -35,7 +35,7 @@ public final class Flair {
 		nextPoll = now + 60_000L;
 
 		var req = HttpRequest.newBuilder(URI.create(MarketConfig.apiBase() + "/api/flair?roles=1"))
-				.timeout(Duration.ofSeconds(8)).header("X-Market-Key", MarketConfig.API_KEY).GET().build();
+				.timeout(Duration.ofSeconds(8)).header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) return;
 			try {
@@ -68,7 +68,7 @@ public final class Flair {
 			if (tagId != null) url += "&tag=" + URLEncoder.encode(tagId, StandardCharsets.UTF_8);
 			if (roleId != null) url += "&role=" + URLEncoder.encode(roleId, StandardCharsets.UTF_8);
 			var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-					.header("X-Market-Key", MarketConfig.API_KEY)
+					.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 					.header("X-User", MarketConfig.userName())
 					.header("X-Token", MarketConfig.token())
 					.POST(HttpRequest.BodyPublishers.noBody()).build();
