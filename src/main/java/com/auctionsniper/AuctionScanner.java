@@ -33,7 +33,8 @@ public final class AuctionScanner {
     private static long pendingBuyPrice;
     private static String pendingBuyName = "";
     private static int attemptedBuys;
-    private static final int MAX_BUYS_PER_SCAN = 3;
+    private static long totalSpentThisRun;
+    private static String pendingBuyKey = "";
     private static final int PREVIOUS_PAGE_SLOT = 45;
     private static final int NEXT_PAGE_SLOT = 53;
     private static final int SORT_ITEMS_SLOT = 49;
@@ -84,6 +85,8 @@ public final class AuctionScanner {
         returningToFirstPage = false;
         pendingFingerprint = "";
         attemptedBuys = 0;
+        totalSpentThisRun = 0;
+        pendingBuyKey = "";
         reopenAfterPurchase = false;
         awaitingBuyConfirmation = false;
         awaitingServerPurchaseResult = false;
@@ -112,8 +115,16 @@ public final class AuctionScanner {
             if (purchaseSucceeded) {
                 awaitingServerPurchaseResult = false;
                 attemptedBuys++;
+                totalSpentThisRun = totalSpentThisRun > Long.MAX_VALUE - pendingBuyPrice
+                        ? Long.MAX_VALUE : totalSpentThisRun + pendingBuyPrice;
                 AuctionSniperClient.recordOwnPurchase(pendingBuyPrice);
-                AuctionSniperClient.msg("Server confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins (" + attemptedBuys + "/" + MAX_BUYS_PER_SCAN + " this scan).");
+                PriceTracker.recordPurchase(pendingBuyKey, pendingBuyPrice);
+                AuctionSniperClient.msg("Confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice
+                        + " coins. Run spending: " + totalSpentThisRun + "/" + AuctionSniperClient.SETTINGS.maxBudget + ".");
+                if (totalSpentThisRun >= AuctionSniperClient.SETTINGS.maxBudget) {
+                    finish("Auto-buy spending cap reached. Total spent: " + totalSpentThisRun + " coins.");
+                    return;
+                }
                 reopenAfterPurchase = true;
                 waitTicks = 20;
                 return;
@@ -195,7 +206,9 @@ public final class AuctionScanner {
             Long average = PriceTracker.average(key);
             MarketApi.RemotePrice sharedPrice = MarketApi.price(key);
             if (average == null && sharedPrice != null) average = sharedPrice.average();
-            if (fresh && autoBuyEnabled && attemptedBuys < MAX_BUYS_PER_SCAN
+            if (fresh && autoBuyEnabled
+                    && totalSpentThisRun <= AuctionSniperClient.SETTINGS.maxBudget
+                    && price <= AuctionSniperClient.SETTINGS.maxBudget - totalSpentThisRun
                     && (PriceTracker.sampleCount(key) >= 8 || (sharedPrice != null && sharedPrice.samples() >= 8)) && average != null
                     && price <= AuctionSniperClient.SETTINGS.maxBudget
                     && AuctionSniperClient.getOwnBalance() >= price
@@ -206,6 +219,7 @@ public final class AuctionScanner {
                 if (client.interactionManager != null) {
                     pendingBuyPrice = price;
                     pendingBuyName = itemName;
+                    pendingBuyKey = key;
                     awaitingBuyConfirmation = true;
                     client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
                     waitTicks = 6;
