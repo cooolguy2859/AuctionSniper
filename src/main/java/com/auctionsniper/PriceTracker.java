@@ -92,9 +92,11 @@ public final class PriceTracker {
     public static Long average(String key) {
         List<Long> values = HISTORY.get(key);
         if (values == null || values.isEmpty()) return null;
-        double total = 0;
-        for (long value : values) total += value;
-        return (long) (total / values.size());
+        List<Long> sorted = new ArrayList<>(values);
+        sorted.sort(Long::compareTo);
+        int middle = sorted.size() / 2;
+        if (sorted.size() % 2 == 1) return sorted.get(middle);
+        return sorted.get(middle - 1) / 2 + sorted.get(middle) / 2;
     }
 
     public static Long median(String key) {
