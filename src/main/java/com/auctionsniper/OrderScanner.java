@@ -89,10 +89,10 @@ public final class OrderScanner {
 
         if (pageRecorded > 0) {
             PriceTracker.flush();
-            AuctionSniper.msg("Orders scan: collected " + pageRecorded
+            AuctionSniperClient.msg("Orders scan: collected " + pageRecorded
                     + " new per-unit prices (" + recorded + " total this session).");
         } else if (orderEntriesSeen > 0) {
-            AuctionSniper.msg("Orders scan: found " + orderEntriesSeen
+            AuctionSniperClient.msg("Orders scan: found " + orderEntriesSeen
                     + " order entries, but no new prices to add.");
         }
     }
