@@ -10,7 +10,8 @@ public final class Settings {
     public long maxBudget = 200_000;
     public boolean showHud = true;
     public int theme = 0;
-    public String cloudApiUrl = "https://auction-sniper-api.firewolfjm10.workers.dev";
+    private static final String CLOUD_API_URL = "https://auction-sniper-api.firewolfjm10.workers.dev";
+    public String cloudApiUrl = CLOUD_API_URL;
     public String cloudApiKey = DEFAULT_CLOUD_API_KEY;
     public String serverId = "lifesteal.net";
     public String serverHost = "lifesteal.net";
@@ -31,7 +32,8 @@ public final class Settings {
             maxBudget = parseLong(p.getProperty("maxBudget"), maxBudget);
             showHud = Boolean.parseBoolean(p.getProperty("showHud", Boolean.toString(showHud)));
             theme = (int) Math.max(0, Math.min(2, parseLong(p.getProperty("theme"), theme)));
-            cloudApiUrl = p.getProperty("cloudApiUrl", cloudApiUrl);
+            // Ignore any legacy URL saved by an older build; the API is pinned to our Worker.
+            cloudApiUrl = CLOUD_API_URL;
             cloudApiKey = p.getProperty("cloudApiKey", DEFAULT_CLOUD_API_KEY).trim();
             if (cloudApiKey.isEmpty()) cloudApiKey = DEFAULT_CLOUD_API_KEY;
             serverId = p.getProperty("serverId", serverId);
@@ -48,7 +50,7 @@ public final class Settings {
         p.setProperty("maxBudget", Long.toString(maxBudget));
         p.setProperty("showHud", Boolean.toString(showHud));
         p.setProperty("theme", Integer.toString(theme));
-        p.setProperty("cloudApiUrl", cloudApiUrl);
+        p.setProperty("cloudApiUrl", CLOUD_API_URL);
         p.setProperty("cloudApiKey", cloudApiKey);
         p.setProperty("serverId", serverId);
         p.setProperty("serverHost", serverHost);
