@@ -64,7 +64,7 @@ public class TodayScreen extends Screen {
 		String url = MarketConfig.apiBase() + "/api/movers";
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
 				.header("ngrok-skip-browser-warning", "true")
-				.header("X-Market-Key", MarketConfig.API_KEY).GET().build();
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (this.client == null) return;
 			this.client.execute(() -> {
