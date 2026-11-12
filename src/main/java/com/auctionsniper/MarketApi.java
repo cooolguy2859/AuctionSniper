@@ -19,6 +19,7 @@ import java.util.concurrent.CompletableFuture;
 /** Optional shared price service. Network work always runs off the Minecraft client thread. */
 public final class MarketApi {
     private static final Map<String, RemotePrice> REMOTE = new ConcurrentHashMap<>();
+    private static final Map<String, RemotePrice> REMOTE_BY_NAME = new ConcurrentHashMap<>();
     private static volatile boolean requestInFlight;
     private static volatile long lastSync;
     private static volatile String lastError = "";
@@ -73,12 +74,14 @@ public final class MarketApi {
                     for (JsonElement element : prices) {
                         JsonObject item = element.getAsJsonObject();
                         String id = item.get("itemId").getAsString();
-                        REMOTE.put(id, new RemotePrice(
+                        RemotePrice value = new RemotePrice(
                                 item.get("average").getAsLong(),
                                 item.get("low").getAsLong(),
                                 item.get("high").getAsLong(),
                                 item.get("samples").getAsInt(),
-                                item.get("lastSeen").getAsLong()));
+                                item.get("lastSeen").getAsLong());
+                        REMOTE.put(id, value);
+                        if (item.has("itemName")) REMOTE_BY_NAME.put(normalize(item.get("itemName").getAsString()), value);
                     }
                 }
                 lastError = "";
@@ -96,7 +99,12 @@ public final class MarketApi {
     }
 
     public static RemotePrice price(String itemId) {
-        return REMOTE.get(itemId);
+        RemotePrice found = REMOTE.get(itemId);
+        return found != null ? found : REMOTE_BY_NAME.get(normalize(itemId));
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
     }
 
     public static int cachedItems() { return REMOTE.size(); }
