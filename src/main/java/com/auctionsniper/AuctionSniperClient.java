@@ -213,18 +213,20 @@ public final class AuctionSniperClient implements ClientModInitializer {
             )
         );
 
-        dispatcher.register(ClientCommandManager.literal("data").executes(context -> {
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player == null || client.getNetworkHandler() == null) {
-                msg("Join Lifesteal Network before collecting data.");
-                return 0;
-            }
-            MarketApi.sync();
-            client.getNetworkHandler().sendChatCommand("bal");
-            client.getNetworkHandler().sendChatCommand("orders");
-            msg("Data collection started: shared prices refreshing, balance requested, and Custom Orders opened. Keep the menu open and visit each category/page; visible order prices are collected automatically. Inventory value updates in the background.");
-            return 1;
-        }));
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+            dispatcher.register(ClientCommandManager.literal("data").executes(context -> {
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client.player == null || client.getNetworkHandler() == null) {
+                    msg("Join Lifesteal Network before collecting data.");
+                    return 0;
+                }
+                MarketApi.sync();
+                client.getNetworkHandler().sendChatCommand("bal");
+                client.getNetworkHandler().sendChatCommand("orders");
+                msg("Data collection started: shared prices refreshing, balance requested, and Custom Orders opened. Keep the menu open and visit each category/page; visible order prices are collected automatically. Inventory value updates in the background.");
+                return 1;
+            }))
+        );
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             String line = message.getString();
