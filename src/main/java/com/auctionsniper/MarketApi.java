@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 public final class MarketApi {
     private static final Map<String, RemotePrice> REMOTE = new ConcurrentHashMap<>();
     private static final Map<String, RemotePrice> REMOTE_BY_NAME = new ConcurrentHashMap<>();
+    private static final Map<String, RemoteOrder> REMOTE_ORDERS = new ConcurrentHashMap<>();
     private static volatile boolean requestInFlight;
     private static volatile long lastSync;
     private static volatile String lastError = "";
@@ -27,6 +28,9 @@ public final class MarketApi {
             new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public record RemotePrice(long average, long low, long high, int samples, long lastSeen) {}
+    /** Current shared buy-order snapshot. bid is a liquidity signal, never a confirmed sale price. */
+    public record RemoteOrder(String ticker, String material, long bid, long demand,
+                              long orders, long listed, long fetchedAt) {}
 
     private MarketApi() {}
 
@@ -75,19 +79,54 @@ public final class MarketApi {
                 JsonArray prices = root.getAsJsonArray("prices");
                 if (prices != null) {
                     for (JsonElement element : prices) {
+                        if (!element.isJsonObject()) continue;
                         JsonObject item = element.getAsJsonObject();
+                        if (!item.has("itemId")) continue;
                         String id = item.get("itemId").getAsString();
                         RemotePrice value = new RemotePrice(
-                                item.get("average").getAsLong(),
-                                item.get("low").getAsLong(),
-                                item.get("high").getAsLong(),
-                                item.get("samples").getAsInt(),
-                                item.get("lastSeen").getAsLong());
+                                number(item, "average"), number(item, "low"), number(item, "high"),
+                                (int) number(item, "samples"), number(item, "lastSeen"));
                         REMOTE.put(id, value);
                         if (item.has("itemName")) REMOTE_BY_NAME.put(normalize(item.get("itemName").getAsString()), value);
                     }
                 }
-                lastError = "";
+                // Pull the shared order book in the same background sync. A failed order
+                // request must not discard a successful price refresh.
+                try {
+                    String orderResponse = request("GET", "/v1/orders?serverId=" + server, null);
+                    JsonObject orderRoot = JsonParser.parseString(orderResponse).getAsJsonObject();
+                    JsonArray orders = orderRoot.getAsJsonArray("orders");
+                    if (orders != null) {
+                        long fetchedAt = System.currentTimeMillis();
+                        Map<String, RemoteOrder> fresh = new ConcurrentHashMap<>();
+                        for (JsonElement element : orders) {
+                            if (!element.isJsonObject()) continue;
+                            JsonObject order = element.getAsJsonObject();
+                            String ticker = order.has("ticker") ? order.get("ticker").getAsString() : "";
+                            if (ticker.isBlank()) continue;
+                            String material = order.has("material") && !order.get("material").isJsonNull()
+                                    ? order.get("material").getAsString() : "";
+                            RemoteOrder value = new RemoteOrder(ticker, material,
+                                    number(order, "bid"), number(order, "demand"), number(order, "orders"),
+                                    number(order, "listed"), fetchedAt);
+                            fresh.put(normalize(ticker), value);
+                            fresh.putIfAbsent(normalize(stripNamespace(ticker)), value);
+                            if (!material.isBlank()) {
+                                fresh.put(normalize(material), value);
+                                fresh.putIfAbsent(normalize(stripNamespace(material)), value);
+                            }
+                        }
+                        REMOTE_ORDERS.clear();
+                        REMOTE_ORDERS.putAll(fresh);
+                    }
+                } catch (Exception orderError) {
+                    lastError = "Order book: " + safeError(orderError);
+                }
+                if (lastError.startsWith("Order book:")) {
+                    // Keep the useful price sync status visible while retaining the last order snapshot.
+                } else {
+                    lastError = "";
+                }
             } catch (Exception e) {
                 lastError = safeError(e);
             } finally {
@@ -107,6 +146,32 @@ public final class MarketApi {
     public static RemotePrice price(String itemId) {
         RemotePrice found = REMOTE.get(itemId);
         return found != null ? found : REMOTE_BY_NAME.get(normalize(itemId));
+    }
+
+    /** Finds a recent shared order row by item id, display name, ticker, or material. */
+    public static RemoteOrder order(String itemId, String displayName) {
+        long now = System.currentTimeMillis();
+        for (String candidate : new String[]{itemId, displayName, stripNamespace(itemId), stripNamespace(displayName)}) {
+            if (candidate == null || candidate.isBlank()) continue;
+            RemoteOrder found = REMOTE_ORDERS.get(normalize(candidate));
+            if (found != null && now - found.fetchedAt() <= 30L * 60L * 1000L) return found;
+        }
+        return null;
+    }
+
+    public static int cachedOrders() { return REMOTE_ORDERS.size(); }
+
+    private static long number(JsonObject object, String key) {
+        try {
+            JsonElement value = object.get(key);
+            return value == null || value.isJsonNull() ? 0L : Math.max(0L, value.getAsLong());
+        } catch (RuntimeException ignored) { return 0L; }
+    }
+
+    private static String stripNamespace(String value) {
+        if (value == null) return "";
+        int colon = value.indexOf(':');
+        return colon >= 0 ? value.substring(colon + 1) : value;
     }
 
     private static String normalize(String value) {
