@@ -289,7 +289,7 @@ public class NetworthTracker {
 		var s = client.getCurrentServerEntry();
 		if (s == null || s.address == null) return false;
 		String address = s.address.toLowerCase(Locale.ROOT);
-		String configured = MarketConfig.serverId().toLowerCase(Locale.ROOT);
+		String configured = MarketConfig.serverHost().toLowerCase(Locale.ROOT);
 		return address.contains(HOME_SERVER) || (!configured.isBlank() && address.contains(configured));
 	}
 
