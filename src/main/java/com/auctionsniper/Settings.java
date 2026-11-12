@@ -13,6 +13,7 @@ public final class Settings {
     public String cloudApiUrl = "https://auction-sniper-api.firewolfjm10.workers.dev";
     public String cloudApiKey = DEFAULT_CLOUD_API_KEY;
     public String serverId = "lifesteal.net";
+    public String serverHost = "lifesteal.net";
 
     private Path file() {
         return net.fabricmc.loader.api.FabricLoader.getInstance()
@@ -34,6 +35,7 @@ public final class Settings {
             cloudApiKey = p.getProperty("cloudApiKey", DEFAULT_CLOUD_API_KEY).trim();
             if (cloudApiKey.isEmpty()) cloudApiKey = DEFAULT_CLOUD_API_KEY;
             serverId = p.getProperty("serverId", serverId);
+            serverHost = p.getProperty("serverHost", serverHost).trim();
         } catch (IOException e) {
             AuctionSniperClient.msg("Could not load config: " + e.getMessage());
         }
@@ -49,6 +51,7 @@ public final class Settings {
         p.setProperty("cloudApiUrl", cloudApiUrl);
         p.setProperty("cloudApiKey", cloudApiKey);
         p.setProperty("serverId", serverId);
+        p.setProperty("serverHost", serverHost);
         try {
             Files.createDirectories(file().getParent());
             try (OutputStream out = Files.newOutputStream(file())) {
