@@ -1065,25 +1065,11 @@ public class NetworthTracker {
 		long v = resolve(prices, norm(item), now);
 		if (v >= 0) return v;
 
-		int cut = item.indexOf('·');
-		if (cut > 0) {
-			long composed = 0; boolean any = false;
-			long base = resolve(priceByBase, norm(baseName(item)), now);
-			if (base >= 0) { composed += base; any = true; }
-			for (String enc : item.substring(cut + 1).split("\\+")) {
-				String e = enc.trim();
-				if (e.isEmpty()) continue;
-				long ev = resolve(prices, norm(e), now);
-				if (ev >= 0) { composed += ev; any = true; }
-			}
-			if (any) return composed;
-		}
-
-		long basePrice = resolve(priceByBase, norm(baseName(item)), now);
-		if (basePrice >= 0) return basePrice;
+		// Enchanted/custom gear must have an exact matching observation.
+		// Falling back to the unenchanted base item invents a price for a different item.
+		if (item.indexOf('·') > 0) return -1;
 
 		com.auctionsniper.MarketApi.RemotePrice shared = com.auctionsniper.MarketApi.price(item);
-		if (shared == null && cut > 0) shared = com.auctionsniper.MarketApi.price(baseName(item));
 		if (shared != null && shared.average() > 0 && shared.samples() > 0) return shared.average();
 		return -1;
 	}
