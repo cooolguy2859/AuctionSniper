@@ -250,15 +250,6 @@ public class StockScreen extends Screen {
 		int doneW = blossom() ? (int) (pw * 259.0 / BL_TW) : 96;
 		addPictured(new StyledButton(doneX, doneY, doneW, 16, Text.literal("§b§lDone"), this::close).accent(C_ACCENT));
 
-		addPictured(new StyledButton(cl, py + ph - 23, 78, 18, Text.literal("§6§l♥ Patreon"), this::openPatreon)
-				.accent(0xFFF96854).tooltip("§6♥ Support on Patreon", "§7Early access & perks.", "§8patreon.com/LifestealMarket"));
-		addPictured(new StyledButton(cl + 82, py + ph - 23, 78, 18, Text.literal("§9§l✦ Discord"), this::openDiscord)
-				.accent(0xFF5865F2).tooltip("§9✦ Join our Discord", "§7Prices, updates & support.", "§8discord.gg/E6aS3vuAd"));
-		addPictured(new StyledButton(cl + 164, py + ph - 23, 78, 18, Text.literal("§d§l✦ Partners"),
-				() -> { markSeenPartners(); if (this.client != null) this.client.setScreen(new PartnershipsScreen(this)); })
-				.accent(0xFFD46BFF).badge(!MarketConfig.get().seenPartners)
-				.tooltip("§d§lPartnerships", "§7Discords we are partnered with.", "§8Click a partner to open its invite."));
-
 		addPictured(new StyledButton(cr - 22, hdrY, 22, 16, Text.literal(""),
 				() -> { if (this.client != null) this.client.setScreen(new SettingsScreen(this)); })
 				.accent(C_ACCENT).gearIcon().tooltip("§b§lSettings"));
@@ -619,7 +610,7 @@ public class StockScreen extends Screen {
 
 			ctx.drawTextWithShadow(this.textRenderer, Text.literal("§b§lLifesteal Market"), cl, py + 9, 0xFFFFFFFF);
 			int tw = this.textRenderer.getWidth(Text.literal("§lLifesteal Market"));
-			ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8by TheyHating"), cl + tw + 6, py + 9, 0xFFFFFFFF);
+			ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8by Rem"), cl + tw + 6, py + 9, 0xFFFFFFFF);
 
 			int tick = 0xCC000000 | (C_ACCENT & 0xFFFFFF);
 			ctx.fill(px + 3, py + 3, px + 10, py + 4, tick);           ctx.fill(px + 3, py + 3, px + 4, py + 10, tick);
