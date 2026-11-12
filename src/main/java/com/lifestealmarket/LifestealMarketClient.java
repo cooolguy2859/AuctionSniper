@@ -285,7 +285,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		String url = MarketConfig.apiBase() + "/api/provision?user="
 				+ java.net.URLEncoder.encode(ign, java.nio.charset.StandardCharsets.UTF_8);
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY).GET().build();
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) {
 				nextProvisionRetry = System.currentTimeMillis() + backoff(provisionFails++);
@@ -308,7 +308,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		nextCosmeticsCheck = now + 60_000L;
 		String url = MarketConfig.apiBase() + "/api/cosmetics";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY)
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName())
 				.header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
@@ -357,7 +357,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		String url = MarketConfig.apiBase() + "/api/access?user="
 				+ java.net.URLEncoder.encode(ign, java.nio.charset.StandardCharsets.UTF_8);
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Token", MarketConfig.token()).GET().build();
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) return;
 			try {
@@ -485,7 +485,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 				+ java.net.URLEncoder.encode(ign, java.nio.charset.StandardCharsets.UTF_8)
 				+ "&current=" + java.net.URLEncoder.encode(cur, java.nio.charset.StandardCharsets.UTF_8);
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY).GET().build();
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) {
 
@@ -532,7 +532,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		String url = MarketConfig.apiBase() + "/api/networth?player="
 				+ java.net.URLEncoder.encode(player, java.nio.charset.StandardCharsets.UTF_8);
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url))
-				.timeout(java.time.Duration.ofSeconds(8)).header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).GET().build();
+				.timeout(java.time.Duration.ofSeconds(8)).header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			MinecraftClient mc = MinecraftClient.getInstance();
 			mc.execute(() -> {
@@ -624,7 +624,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 			if (!alertsSynced) { alertsSynced = true; syncAlerts(); }
 			String url = MarketConfig.apiBase() + "/api/alive";
 			var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(6))
-					.header("X-Market-Key", MarketConfig.API_KEY)
+					.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 					.header("X-Token", MarketConfig.token())
 					.POST(java.net.http.HttpRequest.BodyPublishers.ofString(client.getSession().getUsername())).build();
 			HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString());
@@ -642,7 +642,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		String url = MarketConfig.apiBase() + "/api/alerts";
 
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(6))
-				.header("X-Market-Key", MarketConfig.API_KEY)
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName())
 				.header("X-Token", MarketConfig.token())
 				.POST(java.net.http.HttpRequest.BodyPublishers.ofString(body.toString())).build();
@@ -655,7 +655,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		String ign = mc.getSession().getUsername();
 		String url = MarketConfig.apiBase() + "/api/link";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY)
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 
 				.header("X-User", MarketConfig.userName())
 				.header("X-Token", MarketConfig.token())
@@ -692,7 +692,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		}
 		String url = MarketConfig.apiBase() + "/api/referral";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY)
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName())
 				.header("X-Token", MarketConfig.token())
 				.POST(java.net.http.HttpRequest.BodyPublishers.ofString(referrer)).build();
@@ -780,7 +780,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 		String url = MarketConfig.apiBase() + "/api/tickers";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url))
 				.timeout(java.time.Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY)
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
 				.header("X-User", com.lifestealmarket.MarketConfig.userName())
 				.header("X-Token", com.lifestealmarket.MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString())
