@@ -117,7 +117,15 @@ public final class MarketApi {
     public static String lastError() { return lastError; }
 
     private static String request(String method, String path, String json) throws Exception {
-        String base = AuctionSniperClient.SETTINGS.cloudApiUrl.replaceAll("/+$", "");
+        String base = AuctionSniperClient.SETTINGS.cloudApiUrl.trim().replaceAll("/+$", "");
+        // Older config files may store an API path instead of the Worker origin.
+        // This Worker exposes /v1/* directly from its root.
+        for (String suffix : new String[]{"/api/v1", "/api", "/v1"}) {
+            if (base.toLowerCase(java.util.Locale.ROOT).endsWith(suffix)) {
+                base = base.substring(0, base.length() - suffix.length()).replaceAll("/+$", "");
+                break;
+            }
+        }
         HttpURLConnection connection = (HttpURLConnection) URI.create(base + path).toURL().openConnection();
         connection.setRequestMethod(method);
         connection.setConnectTimeout(5000);
