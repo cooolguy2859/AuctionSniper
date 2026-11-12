@@ -54,7 +54,7 @@ public class ModUsersScreen extends Screen {
 	private void fetch() {
 		String url = MarketConfig.apiBase() + "/api/modusers";
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY).header("X-User", MarketConfig.userName()).header("X-Token", MarketConfig.token()).GET().build();
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).header("X-User", MarketConfig.userName()).header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (this.client == null) return;
 			this.client.execute(() -> {
