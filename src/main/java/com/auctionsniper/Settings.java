@@ -34,8 +34,8 @@ public final class Settings {
             theme = (int) Math.max(0, Math.min(2, parseLong(p.getProperty("theme"), theme)));
             // Ignore any legacy URL saved by an older build; the API is pinned to our Worker.
             cloudApiUrl = CLOUD_API_URL;
-            cloudApiKey = p.getProperty("cloudApiKey", DEFAULT_CLOUD_API_KEY).trim();
-            if (cloudApiKey.isEmpty()) cloudApiKey = DEFAULT_CLOUD_API_KEY;
+            // Ignore any previously saved key; both clients use the key configured on our Worker.
+            cloudApiKey = DEFAULT_CLOUD_API_KEY;
             serverId = p.getProperty("serverId", serverId);
             serverHost = p.getProperty("serverHost", serverHost).trim();
         } catch (IOException e) {
@@ -51,7 +51,7 @@ public final class Settings {
         p.setProperty("showHud", Boolean.toString(showHud));
         p.setProperty("theme", Integer.toString(theme));
         p.setProperty("cloudApiUrl", CLOUD_API_URL);
-        p.setProperty("cloudApiKey", cloudApiKey);
+        p.setProperty("cloudApiKey", DEFAULT_CLOUD_API_KEY);
         p.setProperty("serverId", serverId);
         p.setProperty("serverHost", serverHost);
         try {
