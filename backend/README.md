@@ -1,6 +1,6 @@
 # AuctionSniper Cloudflare backend
 
-The owned backend is a Cloudflare Worker named auction-sniper-api, backed by the D1 database auction-sniper-market. The Fabric client is pinned to this Worker; backend discovery and the old localhost fallback are disabled.
+The owned backend is a Cloudflare Worker named auction-sniper-api, backed by the D1 database auction-sniper-market. The Fabric client is pinned to this Worker, including when an older config file contains a different cloudApiUrl; backend discovery and the old localhost fallback are disabled.
 
 ## Routes
 
@@ -28,7 +28,7 @@ Bind D1 as DB and set a Worker secret named API_KEY. Preserve both bindings when
 
 ## Server IDs
 
-The current legacy Lifesteal UI data uses lifesteal.net as its server ID. AuctionSniper's configurable serverId property is sent to v1 routes so separate networks can keep separate market observations/reports. Do not combine unrelated servers under one ID.
+The default database partition and tracking hostname are both lifesteal.net. In config/auction-sniper.properties, serverId controls the D1 data partition and serverHost controls which Minecraft hostname activates legacy tracking. They are separate on purpose: for example, serverId can be a stable label while serverHost remains the actual address. The v1 API receives serverId for every observation/report, and legacy calls send X-Server-Id. Do not combine unrelated networks under one ID.
 
 ## Data and integrations
 
