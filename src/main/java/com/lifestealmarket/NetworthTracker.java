@@ -716,6 +716,8 @@ public class NetworthTracker {
 
 	public void onChat(String raw) {
 		if (!onHome || raw == null || raw.isEmpty()) return;
+		Matcher sold = SOLD.matcher(raw);
+		if (sold.find()) NetworthHud.showSold(parsePlain(sold.group(1)));
 		Matcher listed = LISTED.matcher(raw);
 		if (listed.find()) {
 			int qty = listed.group(1) != null ? safeInt(listed.group(1), 1) : 1;
