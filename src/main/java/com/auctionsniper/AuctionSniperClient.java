@@ -18,6 +18,11 @@ public final class AuctionSniperClient implements ClientModInitializer {
     public static final BalanceCache BALANCES = new BalanceCache();
     private static long ownBalance = -1;
     public static long getOwnBalance() { return ownBalance; }
+    public static void recordOwnPurchase(long amount) {
+        if (amount <= 0 || ownBalance < 0) return;
+        ownBalance = Math.max(0, ownBalance - amount);
+    }
+
     private static final Pattern OWN_BALANCE_PATTERN =
             Pattern.compile("(?i)(?:your\\s+)?(?:balance|bal)\\s*[:=]?\\s*\\$?([0-9][0-9,]*)\\s*(k|m|b)?");
 
