@@ -101,6 +101,15 @@ public class MarketConfig {
 		return "lifesteal.net";
 	}
 
+	/** Minecraft hostname that activates the legacy server-specific trackers. */
+	public static String serverHost() {
+		try {
+			String host = com.auctionsniper.AuctionSniperClient.SETTINGS.serverHost;
+			if (host != null && !host.isBlank()) return host.trim();
+		} catch (Throwable ignored) {}
+		return "lifesteal.net";
+	}
+
 	public String role = "seller";
 	public double guiSize = 1.0;
 	public String theme = "cyan";
