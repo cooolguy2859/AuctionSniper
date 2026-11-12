@@ -93,9 +93,13 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("market").executes(context -> {
+                    MinecraftClient.getInstance().setScreen(new com.lifestealmarket.gui.MarketScreen(null));
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("servermarket").executes(context -> {
                     if (MinecraftClient.getInstance().getNetworkHandler() != null) {
                         MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("market");
-                        msg("Opening /market. Keep the menu open briefly so AuctionSniper can record visible prices.");
+                        msg("Opening the server's /market command.");
                     }
                     return 1;
                 }))
