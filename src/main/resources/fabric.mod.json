@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "auction_sniper",
   "version": "${version}",
-  "name": "AuctionSniper",
-  "description": "Auction sniper and full Lifesteal market toolkit with charts, price history, net worth, alerts, and shared market data.",
+  "name": "AuctionSniper by Rem",
+  "description": "AuctionSniper market tools, auction scanning, price history, and net-worth features.",
   "environment": "client",
   "entrypoints": { "client": ["com.auctionsniper.AuctionSniperClient", "com.lifestealmarket.LifestealMarketClient"] },
   "mixins": [{ "config": "lifestealmarket.client.mixins.json", "environment": "client" }],
   "depends": { "fabricloader": ">=0.19.3", "minecraft": "~1.21.11", "java": ">=21", "fabric-api": "*" },
-  "authors": ["AuctionSniper contributors", "TheyHating", "rizzuku"]
+  "authors": ["Rem", "Timtim", "Rizzuku"]
 }
