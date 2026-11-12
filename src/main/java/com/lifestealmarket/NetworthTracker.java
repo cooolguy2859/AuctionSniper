@@ -290,7 +290,8 @@ public class NetworthTracker {
 		if (s == null || s.address == null) return false;
 		String address = s.address.toLowerCase(Locale.ROOT);
 		String configured = MarketConfig.serverHost().toLowerCase(Locale.ROOT);
-		return address.contains(HOME_SERVER) || (!configured.isBlank() && address.contains(configured));
+		if (configured.isBlank()) configured = HOME_SERVER;
+		return address.contains(configured);
 	}
 
 	public static String tabFooter(MinecraftClient client) {
