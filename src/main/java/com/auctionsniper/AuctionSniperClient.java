@@ -52,6 +52,21 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         msg("Sell-listing scan started. The Auction House scanner will collect visible listing prices across pages.");
                         AuctionScanner.startScan();
                         return 1;
+                    }))
+                    .then(ClientCommandManager.literal("autobuy").executes(context -> {
+                        MinecraftClient client = MinecraftClient.getInstance();
+                        if (client.player == null || client.getNetworkHandler() == null) {
+                            msg("Join Lifesteal Network before starting an auto-buy scan.");
+                            return 0;
+                        }
+                        if (AuctionScanner.isScanning()) {
+                            msg("A scan is already running. Use /ahsniper cancel first.");
+                            return 0;
+                        }
+                        AuctionScanner.setAutoBuyEnabled(true);
+                        AuctionScanner.startScan();
+                        msg("Auto-buy scan started. Eligible listings may be purchased automatically within your configured profit and budget limits. Use /ahsniper cancel to stop.");
+                        return 1;
                     })))
                 .then(ClientCommandManager.literal("balance")
                     .then(ClientCommandManager.literal("enable").executes(context -> {
@@ -184,7 +199,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan buy | scan sell | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
+                    msg("/ahsniper scan | scan buy | scan sell | scan autobuy | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
             )
