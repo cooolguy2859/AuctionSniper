@@ -144,8 +144,21 @@ public final class MarketApi {
     }
 
     public static RemotePrice price(String itemId) {
+        if (itemId == null) return null;
         RemotePrice found = REMOTE.get(itemId);
-        return found != null ? found : REMOTE_BY_NAME.get(normalize(itemId));
+        if (found != null) return found;
+        found = REMOTE_BY_NAME.get(normalize(itemId));
+        if (found != null) return found;
+        // PriceTracker keys include "registry-id|display name"; the API stores
+        // registry id and display name separately. Match both forms.
+        int separator = itemId.indexOf('|');
+        if (separator >= 0 && separator + 1 < itemId.length()) {
+            String displayName = itemId.substring(separator + 1);
+            found = REMOTE_BY_NAME.get(normalize(displayName));
+            if (found != null) return found;
+            found = REMOTE_BY_NAME.get(normalize(stripNamespace(itemId.substring(0, separator))));
+        }
+        return found;
     }
 
     /** Finds a recent shared order row by item id, display name, ticker, or material. */
