@@ -139,7 +139,7 @@ if(m==="GET"&&p==="/api/orders/series"){
  const ticker=u.searchParams.get("ticker")||"";if(!T(ticker,128))return R({error:"ticker required"},400);
  const raw=u.searchParams.get("range")||"30d";const days=Math.min(365,Math.max(1,Number.parseInt(raw,10)||30));
  const z=await Q(e.DB,"SELECT bid,demand,orders,observed_at AS t FROM order_book_history WHERE server_id=? AND lower(ticker)=lower(?) AND observed_at>? ORDER BY observed_at ASC LIMIT 1500",server,ticker,now-days*86400000).all();
- let rows=z.results||[];if(!rows.length){const cur=await Q(e.DB,"SELECT bid,demand,orders,updated_at AS t FROM order_book WHERE server_id=? AND lower(ticker)=lower(?)",server,ticker).first();if(cur&&Number(cur.bid)>0)rows=[cur];}
+ let rows=z.results||[];if(!rows.length){const cur=await Q(e.DB,"SELECT bid,demand,orders,updated_at AS t FROM order_book WHERE server_id=? AND lower(ticker)=lower(?)",server,ticker).first();if(cur&&Number(cur.bid)>0)rows=[cur];}if(!rows.length){const obs=await Q(e.DB,"SELECT price AS bid,0 AS demand,1 AS orders,observed_at AS t FROM observations WHERE server_id=? AND lower(item_id)=lower(?) AND observed_at>? ORDER BY observed_at ASC LIMIT 1500",server,ticker,now-days*86400000).all();rows=obs.results||[];}
  const bids=rows.map(v=>Number(v.bid||0)).filter(v=>v>0);const pts=rows.map(v=>[Number(v.t),Number(v.bid||0)]);
  const cur=rows.length?rows[rows.length-1]:{bid:0,demand:0,orders:0};const first=bids.length?bids[0]:0,last=bids.length?bids[bids.length-1]:0;
  return R({bid:last,demand:Number(cur.demand||0),orders:Number(cur.orders||0),high:bids.length?Math.max(...bids):0,low:bids.length?Math.min(...bids):0,chg:first>0?(last-first)*100/first:0,avg:bids.length?Math.round(bids.reduce((a,b)=>a+b,0)/bids.length):0,points:pts});
@@ -147,7 +147,7 @@ if(m==="GET"&&p==="/api/orders/series"){
 if(m==="GET"&&p==="/api/book"){
  const ticker=u.searchParams.get("ticker")||"";if(!T(ticker,128))return R([]);
  const cur=await Q(e.DB,"SELECT bid,depth_json FROM order_book WHERE server_id=? AND lower(ticker)=lower(?)",server,ticker).first();
- if(!cur)return R([]);
+ if(!cur){const observed=await Q(e.DB,"SELECT price,player AS seller FROM observations WHERE server_id=? AND lower(item_id)=lower(?) ORDER BY observed_at DESC LIMIT 1",server,ticker).first();return R(observed?[{price:Number(observed.price),seller:observed.seller||"",qty:0}]:[]);}
  let depth=[];try{depth=JSON.parse(cur.depth_json||"[]")}catch{}
  if(!Array.isArray(depth))depth=[];
  const out=depth.map(v=>({price:Number(v.price||0),seller:v.seller||"",qty:Number(v.qty||0)})).filter(v=>v.price>0);
