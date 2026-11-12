@@ -54,15 +54,6 @@ public class LifestealMarketClient implements ClientModInitializer {
 
 		Discovery.resolve(true);
 
-		HTTP.sendAsync(java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:8080/api/version"))
-						.timeout(java.time.Duration.ofMillis(700))
-						.header("X-Market-Key", MarketConfig.API_KEY).GET().build(),
-				java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
-			if (err == null && resp.statusCode() == 200 && resp.body() != null && resp.body().contains("stable")) {
-				MarketConfig.localBase = "http://127.0.0.1:8080";
-				System.out.println("[LifestealMarket] backend detected on this machine - using 127.0.0.1 directly");
-			}
-		});
 
 		priceStream = new PriceStream(prices -> {
 			DATA_VERSION++;
