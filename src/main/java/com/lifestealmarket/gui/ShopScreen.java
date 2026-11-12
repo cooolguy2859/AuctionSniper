@@ -131,7 +131,7 @@ public class ShopScreen extends Screen {
 
 	private void fetchStore() {
 		var req = HttpRequest.newBuilder(URI.create(MarketConfig.apiBase() + "/api/store"))
-				.timeout(Duration.ofSeconds(8)).header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
+				.timeout(Duration.ofSeconds(8)).header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) {
 
