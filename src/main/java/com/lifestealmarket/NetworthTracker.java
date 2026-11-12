@@ -86,7 +86,7 @@ public class NetworthTracker {
 		String url = MarketConfig.apiBase() + "/api/networth/report";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url))
 				.timeout(java.time.Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY)
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
 
 				.header("X-User", com.lifestealmarket.MarketConfig.userName())
 				.header("X-Token", com.lifestealmarket.MarketConfig.token())
@@ -114,7 +114,7 @@ public class NetworthTracker {
 		nextRefFetch = now + 60_000L;
 		String url = MarketConfig.apiBase() + "/api/referral/tags";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).GET().build();
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) return;
 			try {
@@ -144,7 +144,7 @@ public class NetworthTracker {
 		nextOrderFetch = now + 60_000L;
 		String url = MarketConfig.apiBase() + "/api/orders";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).GET().build();
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) return;
 			try {
@@ -267,7 +267,7 @@ public class NetworthTracker {
 		nextBoardFetch = now + 60_000L;
 		String url = MarketConfig.apiBase() + "/api/networth/top";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url))
-				.timeout(java.time.Duration.ofSeconds(8)).header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).GET().build();
+				.timeout(java.time.Duration.ofSeconds(8)).header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) return;
 			try {
@@ -1156,7 +1156,7 @@ public class NetworthTracker {
 		String url = MarketConfig.apiBase() + "/api/tickers";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url))
 				.timeout(java.time.Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY)
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
 				.header("X-User", com.lifestealmarket.MarketConfig.userName())
 				.header("X-Token", com.lifestealmarket.MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString())
