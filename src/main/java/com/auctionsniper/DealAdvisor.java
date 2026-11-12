@@ -48,28 +48,26 @@ public final class DealAdvisor {
             if (spread > fair * 2L) confidence -= 15;
         }
 
-        long bestBid = findMarketBid(displayName);
-        if (bestBid > 0) {
-            // A buy order is a possible resale/liquidity signal, not proof of a sale.
-            if (bestBid > fair) fair = Math.min(fair, bestBid);
-            if (bestBid < askingPrice) confidence -= 10;
-            else confidence += 5;
+        // The shared order book is a liquidity signal, not a completed sale.
+        // Never use a bid to inflate fair value or claim guaranteed resale profit.
+        MarketApi.RemoteOrder order = MarketApi.order(itemKey, displayName);
+        if (order != null && order.bid() > 0) {
+            if (order.bid() >= askingPrice) {
+                confidence += order.orders() > 0 || order.demand() > 0 ? 8 : 4;
+            } else if (order.bid() * 10L < askingPrice * 6L) {
+                confidence -= 8;
+            } else {
+                confidence -= 3;
+            }
+            if (order.listed() > 0 && order.demand() == 0) confidence -= 2;
         }
 
+        if (fair <= 0) return reject("No usable fair-value estimate");
         if (confidence < 35) return new Assessment(false, fair, fair - askingPrice,
                 Math.max(0, confidence), "Market evidence is too uncertain");
         long profit = fair - askingPrice;
         if (profit <= 0) return new Assessment(false, fair, profit, confidence, "Price is not below fair value");
         return new Assessment(true, fair, profit, Math.min(100, confidence), "Price history and market signals support this deal");
-    }
-
-    private static long findMarketBid(String displayName) {
-        String target = normalize(displayName);
-        long best = 0;
-        for (MarketData.Entry entry : MarketData.orders()) {
-            if (normalize(entry.item()).equals(target)) best = Math.max(best, entry.price());
-        }
-        return best;
     }
 
     private static String normalize(String value) {
