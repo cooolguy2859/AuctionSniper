@@ -496,7 +496,7 @@ public class StockScreen extends Screen {
 
 	private void get(String url, java.util.function.Consumer<String> ok, java.util.function.Consumer<String> fail) {
 		HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
 				.header("X-User", com.lifestealmarket.MarketConfig.userName())
 				.header("X-Token", com.lifestealmarket.MarketConfig.token())
 				.GET().build();
