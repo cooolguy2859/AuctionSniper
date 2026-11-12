@@ -274,29 +274,11 @@ public class LifestealMarketClient implements ClientModInitializer {
 	}
 
 	private void maybeProvision(MinecraftClient client) {
-		if (provisionTried || client.player == null || !NetworthTracker.isHomeServer(client)) return;
+		if (client.player == null || !NetworthTracker.isHomeServer(client)) return;
 		if (!MarketConfig.token().isBlank()) { provisionTried = true; return; }
+		// Worker account tokens are issued only after Mojang session verification.
+		// Never fall back to username-only provisioning.
 		MojangAuth.ensureToken(client);
-
-		if (!MojangAuth.unverifiable) return;
-		if (System.currentTimeMillis() < nextProvisionRetry) return;
-		provisionTried = true;
-		String ign = client.getSession().getUsername();
-		String url = MarketConfig.apiBase() + "/api/provision?user="
-				+ java.net.URLEncoder.encode(ign, java.nio.charset.StandardCharsets.UTF_8);
-		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
-		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
-			if (err != null || resp.statusCode() != 200) {
-				nextProvisionRetry = System.currentTimeMillis() + backoff(provisionFails++);
-				provisionTried = false;
-				return;
-			}
-			try {
-				String t = com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject().get("token").getAsString();
-				if (t != null && !t.isBlank()) { MarketConfig.get().accessToken = t; MarketConfig.save(); }
-			} catch (Exception ignored) {}
-		});
 	}
 
 	private long nextCosmeticsCheck = 0L;
