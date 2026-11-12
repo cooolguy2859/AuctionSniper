@@ -21,6 +21,7 @@ const DB = {
             if (sql.includes("FROM observations") && sql.includes("GROUP BY item_id")) {
               return { results: [{
                 ticker: "minecraft:diamond",
+                itemId: "minecraft:diamond",
                 itemName: "Diamond",
                 last: 12500,
                 average: 12500,
