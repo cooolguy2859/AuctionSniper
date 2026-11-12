@@ -92,6 +92,15 @@ public class MarketConfig {
 
 	public static String apiBase() { return CLOUD_API_BASE; }
 
+	/** Server partition shared by the legacy UI API and AuctionSniper v1. */
+	public static String serverId() {
+		try {
+			String id = com.auctionsniper.AuctionSniperClient.SETTINGS.serverId;
+			if (id != null && !id.isBlank()) return id.trim();
+		} catch (Throwable ignored) {}
+		return "lifesteal.net";
+	}
+
 	public String role = "seller";
 	public double guiSize = 1.0;
 	public String theme = "cyan";
