@@ -133,6 +133,8 @@ public class NetworthTracker {
 	private volatile java.util.Map<String, java.util.List<long[]>> orderDepth = new java.util.HashMap<>();
 
 	private volatile java.util.Set<String> chartOnly = new java.util.HashSet<>();
+	private volatile boolean orderDataLoaded = false;
+	private volatile boolean orderDataFailed = false;
 	private long nextOrderFetch = 0L;
 
 	public boolean isChartOnly(String ticker) { return chartOnly.contains(norm(ticker)); }
@@ -142,11 +144,17 @@ public class NetworthTracker {
 	private void fetchOrderBids(long now) {
 		if (now < nextOrderFetch) return;
 		nextOrderFetch = now + 60_000L;
+		orderDataLoaded = false;
+		orderDataFailed = false;
 		String url = MarketConfig.apiBase() + "/api/orders";
 		var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).timeout(java.time.Duration.ofSeconds(8))
 				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
-			if (err != null || resp.statusCode() != 200) return;
+			if (err != null || resp.statusCode() != 200) {
+				orderDataFailed = true;
+				orderDataLoaded = true;
+				return;
+			}
 			try {
 				var arr = com.google.gson.JsonParser.parseString(resp.body()).getAsJsonArray();
 				java.util.Map<String, long[]> m = new java.util.HashMap<>();
@@ -178,9 +186,17 @@ public class NetworthTracker {
 					depth.put(k, rungs);
 				}
 				orderBids = m; orderNames = names; orderDepth = depth; chartOnly = chartsOnly;
-			} catch (Exception ignored) {}
+				orderDataFailed = false;
+			} catch (Exception ignored) {
+				orderDataFailed = true;
+			} finally {
+				orderDataLoaded = true;
+			}
 		});
 	}
+
+	public boolean orderDataLoaded() { return orderDataLoaded; }
+	public boolean orderDataFailed() { return orderDataFailed; }
 
 	public java.util.Map<String, Integer> holdings(MinecraftClient client) {
 		java.util.Map<String, Integer> agg = new java.util.LinkedHashMap<>();
