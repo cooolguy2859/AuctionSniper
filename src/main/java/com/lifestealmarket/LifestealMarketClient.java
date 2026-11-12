@@ -153,32 +153,6 @@ public class LifestealMarketClient implements ClientModInitializer {
 					&& screen instanceof net.minecraft.client.gui.screen.ingame.HandledScreen<?>;
 			boolean inv = screen instanceof net.minecraft.client.gui.screen.ingame.InventoryScreen;
 
-			if (inv) {
-				try {
-					final com.lifestealmarket.gui.StyledButton mkt = new com.lifestealmarket.gui.StyledButton(
-							0, 0, 82, 20, net.minecraft.text.Text.literal("Market"),
-							() -> client.setScreen(new StockScreen(null, "")))
-						.accent(0xFF4D8DFF).glass();
-					net.fabricmc.fabric.api.client.screen.v1.Screens.getButtons(screen).add(mkt);
-					net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.beforeRender(screen).register((scr, ctx, mx, my, delta) -> {
-						net.minecraft.client.gui.widget.ClickableWidget vote = null;
-						for (net.minecraft.client.gui.Element el : scr.children()) {
-							if (el == mkt || !(el instanceof net.minecraft.client.gui.widget.ClickableWidget cw)) continue;
-							String lbl = cw.getMessage() == null ? "" : cw.getMessage().getString();
-							if (lbl.toLowerCase(java.util.Locale.ROOT).contains("vote")) { vote = cw; break; }
-						}
-						if (vote != null) {
-							mkt.setWidth(vote.getWidth());
-							mkt.setPosition(vote.getX(), vote.getY() + vote.getHeight() + 6);
-							return;
-						}
-
-						int panelX = (scr.width - 176) / 2, panelY = (scr.height - 166) / 2;
-						mkt.setWidth(94);
-						mkt.setPosition(panelX + 181, panelY + 82);
-					});
-				} catch (Exception addFail) {}
-			}
 			if (!ec && !inv) return;
 			net.fabricmc.fabric.api.client.screen.v1.ScreenEvents.afterRender(screen).register((scr, ctx, mx, my, delta) -> {
 				if (!NetworthTracker.INSTANCE.onHome() || client.player == null) return;
