@@ -45,8 +45,8 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             msg("Join Lifesteal Network before scanning custom orders.");
                             return 0;
                         }
-                        client.getNetworkHandler().sendChatCommand("orders");
-                        msg("Custom Orders scan started. OrderScanner will collect visible per-unit prices and order details.");
+                        AuctionScanner.setAutoBuyEnabled(false);
+                        AuctionScanner.startScan();
                         return 1;
                     })
                     .then(ClientCommandManager.literal("buy").executes(context -> {
@@ -69,6 +69,25 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         AuctionScanner.startScan();
                         return 1;
                     })))
+                .then(ClientCommandManager.literal("buy").executes(context -> {
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    if (client.player == null || client.getNetworkHandler() == null) {
+                        msg("Join Lifesteal Network first."); return 0;
+                    }
+                    if (AuctionScanner.isScanning()) { msg("A scan is already running. Use /ahsniper stop."); return 0; }
+                    AuctionScanner.setAutoBuyEnabled(true);
+                    AuctionScanner.startScan();
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("stop").executes(context -> {
+                    AuctionScanner.cancel();
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("ah").executes(context -> {
+                    if (MinecraftClient.getInstance().getNetworkHandler() == null) { msg("Join Lifesteal Network first."); return 0; }
+                    MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("ah");
+                    return 1;
+                }))
                 .then(ClientCommandManager.literal("balance")
                     .then(ClientCommandManager.literal("enable").executes(context -> {
                         BalanceOverlay.setEnabled(true);
