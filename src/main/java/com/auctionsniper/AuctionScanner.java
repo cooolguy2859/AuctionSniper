@@ -33,7 +33,7 @@ public final class AuctionScanner {
     private static long pendingBuyPrice;
     private static String pendingBuyName = "";
     private static int attemptedBuys;
-    private static final int MAX_BUYS_PER_SCAN = Integer.MAX_VALUE;
+    private static final int MAX_BUYS_PER_SCAN = 3;
     private static final int PREVIOUS_PAGE_SLOT = 45;
     private static final int NEXT_PAGE_SLOT = 53;
     private static final int SORT_ITEMS_SLOT = 49;
@@ -112,7 +112,8 @@ public final class AuctionScanner {
             if (purchaseSucceeded) {
                 awaitingServerPurchaseResult = false;
                 attemptedBuys++;
-                AuctionSniperClient.msg("Server confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins.");
+                AuctionSniperClient.recordOwnPurchase(pendingBuyPrice);
+                AuctionSniperClient.msg("Server confirmed purchase: " + pendingBuyName + " for " + pendingBuyPrice + " coins (" + attemptedBuys + "/" + MAX_BUYS_PER_SCAN + " this scan).");
                 reopenAfterPurchase = true;
                 waitTicks = 20;
                 return;
@@ -252,11 +253,24 @@ public final class AuctionScanner {
             }
             String value = text.toString().toLowerCase(java.util.Locale.ROOT);
             if (!value.contains("confirm buy")) continue;
-            if (!value.contains("click to purchase")) continue;
-            if (!value.contains(Long.toString(expectedPrice))) continue;
+            if (!containsExactPrice(value, expectedPrice)) continue;
             return i;
         }
         return -1;
+    }
+
+    private static boolean containsExactPrice(String text, long expectedPrice) {
+        if (expectedPrice <= 0) return false;
+        // Match a complete numeric token so 1,200 cannot accidentally match 11,200.
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(?<![0-9])([0-9][0-9,]*)(?![0-9])").matcher(text);
+        while (matcher.find()) {
+            try {
+                long parsed = Long.parseLong(matcher.group(1).replace(",", ""));
+                if (parsed == expectedPrice) return true;
+            } catch (NumberFormatException ignored) { }
+        }
+        return false;
     }
 
     private static boolean isAuctionBuyMenu(ScreenHandler handler) {
