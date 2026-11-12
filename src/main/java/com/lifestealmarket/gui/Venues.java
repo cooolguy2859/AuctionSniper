@@ -125,7 +125,7 @@ public final class Venues {
 	private static void get(String path, java.util.function.Consumer<String> onBody) {
 		String url = MarketConfig.apiBase() + path;
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY)
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName()).header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (err != null || resp.statusCode() != 200) return;
