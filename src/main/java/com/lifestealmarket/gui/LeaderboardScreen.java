@@ -122,7 +122,7 @@ public class LeaderboardScreen extends Screen {
 		String url = MarketConfig.apiBase() + "/api/networth/series?user="
 				+ java.net.URLEncoder.encode(who, java.nio.charset.StandardCharsets.UTF_8);
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY)
+				.header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
 				.header("X-User", com.lifestealmarket.MarketConfig.userName())
 				.header("X-Token", com.lifestealmarket.MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
@@ -150,7 +150,7 @@ public class LeaderboardScreen extends Screen {
 	private void fetch() {
 		String url = MarketConfig.apiBase() + "/api/networth/top";
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).GET().build();
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (this.client == null) return;
 			this.client.execute(() -> {
