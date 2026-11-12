@@ -1,32 +1,44 @@
-# AuctionSniper shared market backend
+# AuctionSniper Cloudflare backend
 
-Cloudflare Worker + D1 API for sharing item-price observations between AuctionSniper players.
+The owned backend is a Cloudflare Worker named auction-sniper-api, backed by the D1 database auction-sniper-market. The Fabric client is pinned to this Worker; backend discovery and the old localhost fallback are disabled.
 
-## Endpoints
+## Routes
 
-- `GET /health` — public health check.
-- `POST /v1/observations` — authenticated price observation.
-- `GET /v1/prices?serverId=lifesteal.net&limit=100` — authenticated average, low, high, sample count, and last-seen time.
-- `GET /v1/history?serverId=lifesteal.net&itemId=minecraft:diamond` — authenticated recent history.
+The Worker serves the AuctionSniper v1 API and compatibility routes used by the existing mod UI.
 
-All authenticated routes require `Authorization: Bearer <API_KEY>`.
+- GET /health
+- POST /v1/observations
+- GET /v1/prices, GET /v1/history, GET /v1/movers
+- POST /v1/networth/report, GET /v1/networth/top, GET /v1/networth/series
+- POST /v1/orders, GET /v1/orders
+- POST /v1/team/report, GET /v1/team/top, GET /v1/team
+- POST /v1/balances, GET /v1/balances/top
+- POST /v1/events, GET /v1/events
+- POST /v1/ender-share, GET /v1/ender-share
 
-## D1 setup
+Compatibility routes cover player provisioning/auth, access checks, net-worth and team boards, ender-chest sharing, tickers and movers, charts and order books, alerts, referrals, flair, mod-user presence, avatar proxy, store and partner metadata.
 
-Create a D1 database named `auction-sniper-market`, then apply `schema.sql`.
+Authenticated routes accept Authorization: Bearer <API_KEY> (v1) or X-Market-Key (legacy client). The key is shared with mod clients and should be treated as a public client credential, not a user password.
 
-Bind the database to the Worker as `DB`. Add a Worker secret named `API_KEY` with a long random value. Do not commit the API key to GitHub or put it in source code.
+## D1
 
-## Worker deployment
+Apply schema.sql to the D1 database. It uses CREATE TABLE/INDEX IF NOT EXISTS and can be applied to an existing database.
 
-Deploy `worker.js` as a module Worker. Configure the D1 binding and secret before enabling the mod's network integration. The Worker does not scrape the Minecraft server; the mod must observe listings in menus that players open and submit those observations.
+Bind D1 as DB and set a Worker secret named API_KEY. Preserve both bindings when updating Worker source.
 
-## API example
+## Server IDs
 
-```http
-POST /v1/observations
-Authorization: Bearer <API_KEY>
-Content-Type: application/json
+The current legacy Lifesteal UI data uses lifesteal.net as its server ID. AuctionSniper's configurable serverId property is sent to v1 routes so separate networks can keep separate market observations/reports. Do not combine unrelated servers under one ID.
+
+## Data and integrations
+
+The Worker stores new observations going forward; history from a separate backend is not automatically copied. The mod records item prices it sees while players open supported market/order screens.
+
+Discord linking still needs a separate Discord bot/webhook integration and returns HTTP 503 rather than falsely claiming a link succeeded. The shop and partner endpoints currently return empty catalogues until entries are added; custom artwork returns 404 until images are stored. Avatar images are proxied from mc-heads.net. These are explicit integration/data gaps, not connections to the old backend.
+
+## Example
+
+POST /v1/observations with Authorization: Bearer <API_KEY> and JSON body:
 
 {
   "serverId": "lifesteal.net",
@@ -35,6 +47,3 @@ Content-Type: application/json
   "price": 12500,
   "player": "ExamplePlayer"
 }
-```
-
-This initial backend stores observations and exposes shared aggregates/history. It does not yet implement user accounts, purchase execution, or a public web dashboard.
