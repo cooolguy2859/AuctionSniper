@@ -28,13 +28,16 @@ public final class Venues {
 	private static final Map<String, String> materials = new java.util.concurrent.ConcurrentHashMap<>();
 	private static volatile String[] allNames = new String[0];
 	private static volatile long lastFetch = 0;
+	private static volatile boolean loaded = false;
+	private static volatile boolean fetching = false;
+	private static volatile int pendingFetches = 0;
 
 	private Venues() {}
 
 	public record Venue(String label, String cmd, long price, long qty, boolean instant) {}
 
 	public static String[] allNames() { return allNames; }
-	public static boolean ready() { return !names.isEmpty(); }
+	public static boolean ready() { return loaded; }
 	public static String materialFor(String ticker) { return materials.get(NetworthTracker.norm(ticker)); }
 	public static void noteMaterial(String normTicker, String material) {
 		if (normTicker != null && material != null && !material.isEmpty()) materials.putIfAbsent(normTicker, material);
@@ -73,8 +76,10 @@ public final class Venues {
 
 	public static void refresh() {
 		long now = System.currentTimeMillis();
-		if (now - lastFetch < 30_000) return;
+		if (fetching || now - lastFetch < 30_000) return;
 		lastFetch = now;
+		fetching = true;
+		pendingFetches = 2;
 		get("/api/tickers", body -> {
 			var arr = com.google.gson.JsonParser.parseString(body).getAsJsonArray();
 			Map<String, long[]> m = new HashMap<>();
@@ -88,7 +93,7 @@ public final class Venues {
 			}
 			ah = m;
 			rebuildNames();
-		});
+		}, Venues::fetchDone);
 		get("/api/market", body -> {
 			var arr = com.google.gson.JsonParser.parseString(body).getAsJsonArray();
 			Map<String, long[]> m = new HashMap<>();
@@ -103,7 +108,15 @@ public final class Venues {
 			}
 			market = m;
 			rebuildNames();
-		});
+		}, Venues::fetchDone);
+	}
+
+	private static synchronized void fetchDone() {
+		if (pendingFetches > 0) pendingFetches--;
+		if (pendingFetches == 0) {
+			loaded = true;
+			fetching = false;
+		}
 	}
 
 	private static void rebuildNames() {
@@ -122,14 +135,19 @@ public final class Venues {
 		com.lifestealmarket.NetworthTracker.playerMenuUntil = until;
 	}
 
-	private static void get(String path, java.util.function.Consumer<String> onBody) {
+	private static void get(String path, java.util.function.Consumer<String> onBody, Runnable onDone) {
 		String url = MarketConfig.apiBase() + path;
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
 				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName()).header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
-			if (err != null || resp.statusCode() != 200) return;
-			try { onBody.accept(resp.body()); } catch (Exception ignored) {}
+			try {
+				if (err == null && resp.statusCode() == 200) {
+					try { onBody.accept(resp.body()); } catch (Exception ignored) {}
+				}
+			} finally {
+				onDone.run();
+			}
 		});
 	}
 }
