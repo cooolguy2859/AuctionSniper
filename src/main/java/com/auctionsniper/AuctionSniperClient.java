@@ -4,7 +4,7 @@ import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -37,8 +37,8 @@ public final class AuctionSniperClient implements ClientModInitializer {
         BalanceOverlay.initialize();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-            dispatcher.register(ClientCommandManager.literal("ahsniper")
-                .then(ClientCommandManager.literal("scan")
+            dispatcher.register(ClientCommands.literal("ahsniper")
+                .then(ClientCommands.literal("scan")
                     .executes(context -> {
                         MinecraftClient client = MinecraftClient.getInstance();
                         if (client.player == null || client.getNetworkHandler() == null) {
@@ -49,7 +49,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         AuctionScanner.startScan();
                         return 1;
                     })
-                    .then(ClientCommandManager.literal("buy").executes(context -> {
+                    .then(ClientCommands.literal("buy").executes(context -> {
                         MinecraftClient client = MinecraftClient.getInstance();
                         if (client.player == null || client.getNetworkHandler() == null) {
                             msg("Join Lifesteal Network before starting the Auction House auto-buy scan.");
@@ -64,12 +64,12 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         msg("Auction House auto-buy scan started. It scans /ah and checks listings against your profit and budget settings.");
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("sell").executes(context -> {
+                    .then(ClientCommands.literal("sell").executes(context -> {
                         msg("Sell-listing scan started. The Auction House scanner will collect visible listing prices across pages.");
                         AuctionScanner.startScan();
                         return 1;
                     })))
-                .then(ClientCommandManager.literal("buy").executes(context -> {
+                .then(ClientCommands.literal("buy").executes(context -> {
                     MinecraftClient client = MinecraftClient.getInstance();
                     if (client.player == null || client.getNetworkHandler() == null) {
                         msg("Join Lifesteal Network first."); return 0;
@@ -79,84 +79,84 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     AuctionScanner.startScan();
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("stop").executes(context -> {
+                .then(ClientCommands.literal("stop").executes(context -> {
                     AuctionScanner.cancel();
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("ah").executes(context -> {
+                .then(ClientCommands.literal("ah").executes(context -> {
                     if (MinecraftClient.getInstance().getNetworkHandler() == null) { msg("Join Lifesteal Network first."); return 0; }
                     MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("ah");
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("balance")
-                    .then(ClientCommandManager.literal("enable").executes(context -> {
+                .then(ClientCommands.literal("balance")
+                    .then(ClientCommands.literal("enable").executes(context -> {
                         BalanceOverlay.setEnabled(true);
                         msg("Player balance labels enabled.");
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("disable").executes(context -> {
+                    .then(ClientCommands.literal("disable").executes(context -> {
                         BalanceOverlay.setEnabled(false);
                         msg("Player balance labels disabled.");
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("refresh").executes(context -> {
+                    .then(ClientCommands.literal("refresh").executes(context -> {
                         BalanceOverlay.requestRefresh();
                         msg("Refreshing nearby player balances (rate limited).");
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("status").executes(context -> {
+                    .then(ClientCommands.literal("status").executes(context -> {
                         msg("Balance labels: " + (BalanceOverlay.isEnabled() ? "enabled" : "disabled")
                                 + " | cached players: " + BALANCES.size());
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("clear").executes(context -> {
+                    .then(ClientCommands.literal("clear").executes(context -> {
                         BALANCES.clear();
                         BalanceOverlay.clearRequestCache();
                         msg("Player balance cache cleared.");
                         return 1;
                     })))
-                .then(ClientCommandManager.literal("autobuy")
-                    .then(ClientCommandManager.literal("on").executes(context -> {
+                .then(ClientCommands.literal("autobuy")
+                    .then(ClientCommands.literal("on").executes(context -> {
                         AuctionScanner.setAutoBuyEnabled(true);
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("off").executes(context -> {
+                    .then(ClientCommands.literal("off").executes(context -> {
                         AuctionScanner.setAutoBuyEnabled(false);
                         return 1;
                     })))
-                .then(ClientCommandManager.literal("cloud")
-                    .then(ClientCommandManager.literal("status").executes(context -> {
+                .then(ClientCommands.literal("cloud")
+                    .then(ClientCommands.literal("status").executes(context -> {
                         msg("Cloud market: " + (MarketApi.configured() ? "configured" : "API key missing")
                                 + " | shared items: " + MarketApi.cachedItems()
                                 + (MarketApi.lastError().isBlank() ? "" : " | last error: " + MarketApi.lastError()));
                         return 1;
                     }))
-                    .then(ClientCommandManager.literal("sync").executes(context -> {
+                    .then(ClientCommands.literal("sync").executes(context -> {
                         if (!MarketApi.configured()) { msg("Set cloudApiKey in config/auction-sniper.properties first."); return 0; }
                         MarketApi.sync();
                         msg("Refreshing shared market prices.");
                         return 1;
                     })))
-                .then(ClientCommandManager.literal("orders").executes(context -> {
+                .then(ClientCommands.literal("orders").executes(context -> {
                     if (MinecraftClient.getInstance().getNetworkHandler() != null) {
                         MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("orders");
                         msg("Opening /orders. Keep the menu open briefly so AuctionSniper can record visible prices.");
                     }
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("market").executes(context -> {
-                    MinecraftClient.getInstance().setScreen(new com.lifestealmarket.gui.MarketScreen(null));
+                .then(ClientCommands.literal("market").executes(context -> {
+                    MinecraftClient.getInstance().gui.setScreen(new com.lifestealmarket.gui.MarketScreen(null));
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("servermarket").executes(context -> {
+                .then(ClientCommands.literal("servermarket").executes(context -> {
                     if (MinecraftClient.getInstance().getNetworkHandler() != null) {
                         MinecraftClient.getInstance().getNetworkHandler().sendChatCommand("market");
                         msg("Opening the server's /market command.");
                     }
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("alert")
-                    .then(ClientCommandManager.argument("amount", StringArgumentType.word()).executes(context -> {
+                .then(ClientCommands.literal("alert")
+                    .then(ClientCommands.argument("amount", StringArgumentType.word()).executes(context -> {
                         MinecraftClient client = MinecraftClient.getInstance();
                         if (client.player == null) return 0;
                         long amount = parseAmount(StringArgumentType.getString(context, "amount"));
@@ -166,15 +166,15 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         MarketData.addAlert(item, amount);
                         return 1;
                     })))
-                .then(ClientCommandManager.literal("gui").executes(context -> {
-                    MinecraftClient.getInstance().setScreen(new CommandMenuScreen());
+                .then(ClientCommands.literal("gui").executes(context -> {
+                    MinecraftClient.getInstance().gui.setScreen(new CommandMenuScreen());
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("cancel").executes(context -> {
+                .then(ClientCommands.literal("cancel").executes(context -> {
                     AuctionScanner.cancel();
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("status").executes(context -> {
+                .then(ClientCommands.literal("status").executes(context -> {
                     msg("Scan: " + (AuctionScanner.isScanning() ? "running" : "idle")
                             + " | pages: " + AuctionScanner.getPages()
                             + " | priced listings: " + AuctionScanner.getPricedListings()
@@ -184,8 +184,8 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             + " | last own balance: " + (ownBalance < 0 ? "unknown" : ownBalance));
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("profit").then(ClientCommandManager.literal("min")
-                    .then(ClientCommandManager.argument("amount", StringArgumentType.word())
+                .then(ClientCommands.literal("profit").then(ClientCommands.literal("min")
+                    .then(ClientCommands.argument("amount", StringArgumentType.word())
                         .executes(context -> {
                             long amount = parseAmount(StringArgumentType.getString(context, "amount"));
                             if (amount < 0) { msg("Invalid amount. Examples: 200k, 1m, 500000."); return 0; }
@@ -194,8 +194,8 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             msg("Minimum profit set to " + amount);
                             return 1;
                         }))))
-                .then(ClientCommandManager.literal("budget")
-                    .then(ClientCommandManager.argument("amount", StringArgumentType.word())
+                .then(ClientCommands.literal("budget")
+                    .then(ClientCommands.argument("amount", StringArgumentType.word())
                         .executes(context -> {
                             String raw = StringArgumentType.getString(context, "amount");
                             long amount = raw.equalsIgnoreCase("balance") ? ownBalance : parseAmount(raw);
@@ -210,15 +210,15 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             msg("Maximum budget cap set to " + amount + " coins.");
                             return 1;
                         })))
-                .then(ClientCommandManager.literal("hud")
-                    .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                .then(ClientCommands.literal("hud")
+                    .then(ClientCommands.argument("enabled", BoolArgumentType.bool())
                         .executes(context -> {
                             SETTINGS.showHud = BoolArgumentType.getBool(context, "enabled");
                             SETTINGS.save();
                             msg("HUD " + (SETTINGS.showHud ? "enabled" : "disabled"));
                             return 1;
                         })))
-                .then(ClientCommandManager.literal("data").executes(context -> {
+                .then(ClientCommands.literal("data").executes(context -> {
                     MinecraftClient client = MinecraftClient.getInstance();
                     if (client.player == null || client.getNetworkHandler() == null) {
                         msg("Join Lifesteal Network before collecting data.");
@@ -230,7 +230,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                     msg("Data collection started: refreshing shared prices, requesting your balance, and opening Custom Orders. Keep the menu open and visit each category/page; visible order prices are collected automatically. Inventory value updates in the background.");
                     return 1;
                 }))
-                .then(ClientCommandManager.literal("help").executes(context -> {
+                .then(ClientCommands.literal("help").executes(context -> {
                     msg("/data or /ahsniper data | scan (orders) | scan buy (AH auto-buy) | scan sell | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
@@ -238,7 +238,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
         );
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-            dispatcher.register(ClientCommandManager.literal("data").executes(context -> {
+            dispatcher.register(ClientCommands.literal("data").executes(context -> {
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client.player == null || client.getNetworkHandler() == null) {
                     msg("Join Lifesteal Network before collecting data.");

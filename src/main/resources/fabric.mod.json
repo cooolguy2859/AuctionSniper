@@ -10,6 +10,6 @@
     "mod-control-center": ["com.auctionsniper.ControlCenterBridge"]
   },
   "mixins": [{ "config": "lifestealmarket.client.mixins.json", "environment": "client" }],
-  "depends": { "fabricloader": ">=0.19.3", "minecraft": "~1.21.11", "java": ">=21", "fabric-api": "*" },
+  "depends": { "fabricloader": ">=0.19.3", "minecraft": "26.2", "java": ">=25", "fabric-api": "*" },
   "authors": ["Rem", "Timtim", "Rizzuku"]
 }
