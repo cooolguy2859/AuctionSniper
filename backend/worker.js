@@ -34,8 +34,8 @@ if(m==="POST"&&p==="/api/auth/verify"){
  const mojang=await fetch("https://sessionserver.mojang.com/session/minecraft/hasJoined?username="+encodeURIComponent(ch.player)+"&serverId="+encodeURIComponent(nonce));if(!mojang.ok)return R({error:"Mojang did not confirm this session"},403);const profile=await B(mojang);if(!profile||typeof profile.name!=="string"||profile.name.toLowerCase()!==ch.player.toLowerCase())return R({error:"Mojang account mismatch"},403);const token=await tokenFor(ch.player);await Q(e.DB,"DELETE FROM auth_challenges WHERE server_id=? AND player=?",server,ch.player).run();return R({token,uuid:profile.id||null});
 }
 if(m==="GET"&&p==="/api/access"){
- const player=u.searchParams.get("user")||who;if(!await validUser(player))return R({error:"Account verification required"},403);const row=await Q(e.DB,"SELECT token FROM player_accounts WHERE server_id=? AND lower(player)=lower(?)",server,player).first();const sent=r.headers.get("x-token")||"";
- return R({tokenOwner:row&&row.token===sent?player:null,welcome:false,onboardAlways:false,refNext:0,refNextTag:null,referrals:0});
+ const player=u.searchParams.get("user")||who;if(!await validUser(player))return R({error:"Account verification required"},403);const row=await Q(e.DB,"SELECT token FROM player_accounts WHERE server_id=? AND lower(player)=lower(?)",server,player).first();const sent=r.headers.get("x-token")||"";const count=await Q(e.DB,"SELECT COUNT(*) AS refs FROM player_referrals WHERE server_id=? AND lower(referrer)=lower(?)",server,player).first();const tag=await Q(e.DB,"SELECT tag FROM referral_tags WHERE server_id=? AND lower(player)=lower(?)",server,player).first();
+ return R({tokenOwner:row&&row.token===sent?player:null,welcome:false,onboardAlways:false,refNext:0,refNextTag:null,refs:Number(count&&count.refs||0),refTag:tag?tag.tag:null});
 }
 if(m==="GET"&&p==="/api/cosmetics")return R({themes:[],items:[],loyalty:{days:0,granted:false}});
 if(m==="POST"&&p==="/api/alive"){
