@@ -86,7 +86,7 @@ if(m==="GET"&&p==="/api/tickers")return R(await tickers());
 if(m==="GET"&&p==="/api/stream"){const data=await tickers();return new Response("data:"+JSON.stringify(data)+"\n\n",{headers:{"content-type":"text/event-stream; charset=utf-8","cache-control":"no-cache, no-transform","connection":"keep-alive"}});}
 if(m==="GET"&&p==="/api/orders"){
  const z=await Q(e.DB,"SELECT ticker,bid,demand,orders,listed,material,depth_json FROM order_book WHERE server_id=? ORDER BY bid DESC LIMIT 500",server).all();
- return R((z.results||[]).map(v=>({ticker:v.ticker,bid:Number(v.bid||0),demand:Number(v.demand||0),orders:Number(v.orders||0),listed:Number(v.listed||0),material:v.material,depth:JSON.parse(v.depth_json||"[]")})));
+ if((z.results||[]).length)return R(z.results.map(v=>({ticker:v.ticker,bid:Number(v.bid||0),demand:Number(v.demand||0),orders:Number(v.orders||0),listed:Number(v.listed||0),material:v.material,depth:JSON.parse(v.depth_json||"[]")})));const obs=await Q(e.DB,"SELECT o.item_id AS ticker,o.price AS bid,COUNT(*) AS orders,MAX(o.observed_at) AS seen FROM observations o JOIN (SELECT item_id,MAX(observed_at) AS seen FROM observations WHERE server_id=? GROUP BY item_id) q ON q.item_id=o.item_id AND q.seen=o.observed_at WHERE o.server_id=? GROUP BY o.item_id,o.price ORDER BY seen DESC LIMIT 500",s,s).all();return R((obs.results||[]).map(v=>({ticker:v.ticker,bid:Number(v.bid||0),demand:0,orders:Number(v.orders||0),listed:true,material:null,depth:[{price:Number(v.bid||0),qty:0}]})));
 }
 if(m==="GET"&&p==="/api/movers"){
  const z=await Q(e.DB,"SELECT item_id AS ticker,price,observed_at AS t FROM observations WHERE server_id=? AND observed_at>? ORDER BY observed_at ASC LIMIT 10000",server,now-86400000).all();
@@ -156,7 +156,7 @@ if(m==="GET"&&p==="/api/book"){
 }
 if(m==="GET"&&p==="/api/market"){
  const z=await Q(e.DB,"SELECT ticker,bid,demand,orders,listed,material FROM order_book WHERE server_id=? ORDER BY bid DESC LIMIT 500",server).all();
- return R((z.results||[]).map(v=>({ticker:v.ticker,ask:Number(v.bid||0),supply:Number(v.listed||0),demand:Number(v.demand||0),orders:Number(v.orders||0),material:v.material})));
+ if((z.results||[]).length)return R(z.results.map(v=>({ticker:v.ticker,ask:Number(v.bid||0),supply:Number(v.listed||0),demand:Number(v.demand||0),orders:Number(v.orders||0),material:v.material})));const obs=await Q(e.DB,"SELECT item_id AS ticker,ROUND(AVG(price)) AS ask,COUNT(*) AS supply,MAX(observed_at) AS seen FROM observations WHERE server_id=? GROUP BY item_id ORDER BY seen DESC LIMIT 500",server).all();return R((obs.results||[]).map(v=>({ticker:v.ticker,ask:Number(v.ask||0),supply:Number(v.supply||0),demand:0,orders:0,material:null})));
 }
 if(m==="GET"&&p==="/api/flair"){
  const z=await Q(e.DB,"SELECT player AS name,color,tag_id AS tagId,role_id AS roleId FROM player_flair WHERE server_id=?",server).all();
