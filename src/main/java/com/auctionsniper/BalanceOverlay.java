@@ -1,10 +1,10 @@
 package com.auctionsniper;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
@@ -42,7 +42,7 @@ public final class BalanceOverlay {
 
         // Temporary HUD fallback for Minecraft 1.21.11; world nameplates need
         // a version-specific renderer integration.
-        HudRenderCallback.EVENT.register((drawContext, tickCounter) -> {
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("auction_sniper", "balance_labels"), (drawContext, tickCounter) -> {
             MinecraftClient client = MinecraftClient.getInstance();
             if (!enabled || client.world == null || client.player == null) return;
             int y = 22;
@@ -50,7 +50,7 @@ public final class BalanceOverlay {
                 if (target == client.player || target.squaredDistanceTo(client.player) > 32 * 32) continue;
                 Long balance = AuctionSniperClient.BALANCES.get(target.getName().getString());
                 if (balance == null) continue;
-                drawContext.drawTextWithShadow(client.textRenderer,
+                drawContext.text(client.font,
                         target.getName().getString() + " BAL: " + format(balance),
                         6, y, 0x55FF55);
                 y += 11;
