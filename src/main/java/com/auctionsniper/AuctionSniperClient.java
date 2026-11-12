@@ -148,7 +148,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("gui").executes(context -> {
-                    MinecraftClient.getInstance().setScreen(new MarketScreen());
+                    MinecraftClient.getInstance().setScreen(new CommandMenuScreen());
                     return 1;
                 }))
                 .then(ClientCommandManager.literal("cancel").executes(context -> {
