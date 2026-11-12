@@ -1,6 +1,8 @@
 package com.lifestealmarket;
 
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import org.lwjgl.glfw.GLFW;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
@@ -12,9 +14,28 @@ public final class NetworthHud {
     private static long soldAmount;
     private static long soldUntil;
     private static final int W = 164, H = 78;
+    private static boolean leftMouseDown;
     private NetworthHud() {}
 
     public static void initialize() {
+        ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+            boolean down = mc.getWindow() != null
+                    && GLFW.glfwGetMouseButton(mc.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_1) == GLFW.GLFW_PRESS;
+            if (down && !leftMouseDown && mc.player != null && mc.world != null) {
+                MarketConfig cfg = MarketConfig.get();
+                if (cfg.showHud && NetworthTracker.INSTANCE.onHome()) {
+                    double mx = mc.mouse.getX() * mc.getWindow().getScaledWidth() / mc.getWindow().getWidth();
+                    double my = mc.mouse.getY() * mc.getWindow().getScaledHeight() / mc.getWindow().getHeight();
+                    int x = Math.max(4, Math.min(mc.getWindow().getScaledWidth() - W - 4, cfg.hudX));
+                    int y = Math.max(4, Math.min(mc.getWindow().getScaledHeight() - H - 4, cfg.hudY));
+                    if (mx >= x + W - 19 && mx <= x + W - 3 && my >= y + 2 && my <= y + 18) {
+                        cfg.showHud = false;
+                        MarketConfig.save();
+                    }
+                }
+            }
+            leftMouseDown = down;
+        });
         HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             MarketConfig cfg = MarketConfig.get();
@@ -35,6 +56,8 @@ public final class NetworthHud {
             };
             ctx.fill(x, y, x + W, y + H, bg);
             ctx.fill(x, y, x + W, y + 2, MarketConfig.themeColor(cfg.theme));
+            ctx.fill(x + W - 18, y + 4, x + W - 4, y + 17, 0x88445566);
+            ctx.drawTextWithShadow(mc.textRenderer, Text.literal("x"), x + W - 14, y + 6, 0xFFFFFFFF);
             ctx.drawTextWithShadow(mc.textRenderer, Text.literal("Net worth"), x + 7, y + 6, 0xFFB7C7D8);
             ctx.drawTextWithShadow(mc.textRenderer, Text.literal(Coins.fmt(worth)), x + 7, y + 17, 0xFFFFFFFF);
             String delta = change == 0 ? "24h: collecting data" : (change > 0 ? "+" : "") + Coins.fmt(change) + " 24h";
