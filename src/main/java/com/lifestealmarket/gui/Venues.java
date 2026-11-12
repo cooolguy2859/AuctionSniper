@@ -30,6 +30,7 @@ public final class Venues {
 	private static volatile long lastFetch = 0;
 	private static volatile boolean loaded = false;
 	private static volatile boolean fetching = false;
+	private static volatile String lastError = "";
 	private static volatile int pendingFetches = 0;
 
 	private Venues() {}
@@ -38,6 +39,7 @@ public final class Venues {
 
 	public static String[] allNames() { return allNames; }
 	public static boolean ready() { return loaded; }
+	public static String lastError() { return lastError; }
 	public static String materialFor(String ticker) { return materials.get(NetworthTracker.norm(ticker)); }
 	public static void noteMaterial(String normTicker, String material) {
 		if (normTicker != null && material != null && !material.isEmpty()) materials.putIfAbsent(normTicker, material);
@@ -79,6 +81,7 @@ public final class Venues {
 		if (fetching || now - lastFetch < 30_000) return;
 		lastFetch = now;
 		fetching = true;
+		lastError = "";
 		pendingFetches = 2;
 		get("/api/tickers", body -> {
 			var arr = com.google.gson.JsonParser.parseString(body).getAsJsonArray();
@@ -143,7 +146,9 @@ public final class Venues {
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			try {
 				if (err == null && resp.statusCode() == 200) {
-					try { onBody.accept(resp.body()); } catch (Exception ignored) {}
+					try { onBody.accept(resp.body()); } catch (Exception ignored) { lastError = "Invalid market response"; }
+				} else {
+					lastError = err != null ? "Network connection failed" : "Market API HTTP " + resp.statusCode();
 				}
 			} finally {
 				onDone.run();
