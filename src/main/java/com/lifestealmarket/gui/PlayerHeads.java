@@ -48,7 +48,7 @@ final class PlayerHeads {
 				String url = com.lifestealmarket.MarketConfig.apiBase() + "/api/avatar?name="
 						+ java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8);
 				HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-						.header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
+						.header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId()).GET().build();
 				HttpResponse<byte[]> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofByteArray());
 				if (resp.statusCode() != 200 || resp.body() == null || resp.body().length == 0) return;
 				byte[] bytes = resp.body();
