@@ -12,7 +12,7 @@ import java.util.Map;
 public final class PriceCache {
 	private PriceCache() {}
 
-	public static final long MAX_AGE_MS = 7L * 24 * 60 * 60 * 1000;
+	public static final long MAX_AGE_MS = 24L * 60 * 60 * 1000;
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("lifestealmarket_pricecache.json");
