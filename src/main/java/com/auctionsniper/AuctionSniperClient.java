@@ -33,10 +33,26 @@ public final class AuctionSniperClient implements ClientModInitializer {
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
             dispatcher.register(ClientCommandManager.literal("ahsniper")
-                .then(ClientCommandManager.literal("scan").executes(context -> {
-                    AuctionScanner.startScan();
-                    return 1;
-                }))
+                .then(ClientCommandManager.literal("scan")
+                    .executes(context -> {
+                        AuctionScanner.startScan();
+                        return 1;
+                    })
+                    .then(ClientCommandManager.literal("buy").executes(context -> {
+                        MinecraftClient client = MinecraftClient.getInstance();
+                        if (client.getNetworkHandler() == null) {
+                            msg("Join Lifesteal Network before scanning buy orders.");
+                            return 0;
+                        }
+                        client.getNetworkHandler().sendChatCommand("orders");
+                        msg("Buy-order scan started. Keep the Custom Orders menu open and visit each page; visible order totals will be collected automatically.");
+                        return 1;
+                    }))
+                    .then(ClientCommandManager.literal("sell").executes(context -> {
+                        msg("Sell-listing scan started. The Auction House scanner will collect visible listing prices across pages.");
+                        AuctionScanner.startScan();
+                        return 1;
+                    })))
                 .then(ClientCommandManager.literal("balance")
                     .then(ClientCommandManager.literal("enable").executes(context -> {
                         BalanceOverlay.setEnabled(true);
@@ -168,7 +184,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
+                    msg("/ahsniper scan buy | scan sell | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
             )
