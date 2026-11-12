@@ -28,6 +28,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
         PriceTracker.load();
         MarketData.initialize();
         AuctionScanner.initialize();
+        OrderScanner.initialize();
         BalanceOverlay.initialize();
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
