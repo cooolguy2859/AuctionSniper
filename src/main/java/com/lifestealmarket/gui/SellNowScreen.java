@@ -168,14 +168,20 @@ public class SellNowScreen extends Screen {
 			center(ctx, "§8Only available on the Lifesteal server.");
 			super.render(ctx, mx, my, delta); return;
 		}
-		if (!NetworthTracker.INSTANCE.hasOrderData()) {
+		if (!NetworthTracker.INSTANCE.orderDataLoaded()) {
 			for (int i = 0; i < 5; i++) Ui.shimmerCard(ctx, cl, listTop + i * 18, cr - cl, 14);
 			ctx.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§8fetching live buy orders…"),
 					px + pw / 2, py + ph - 12, 0xFFFFFFFF);
 			super.render(ctx, mx, my, delta); return;
 		}
+		if (NetworthTracker.INSTANCE.orderDataFailed()) {
+			center(ctx, "§8Couldn't load live buy orders — check your connection.");
+			super.render(ctx, mx, my, delta); return;
+		}
 		if (rows.isEmpty()) {
-			center(ctx, "§8Nothing you're holding can be sold anywhere right now.");
+			center(ctx, Venues.allNames().length == 0
+					? "§8No shared orders yet — scan auctions to collect prices."
+					: "§8Nothing you're holding can be sold anywhere right now.");
 			super.render(ctx, mx, my, delta); return;
 		}
 
