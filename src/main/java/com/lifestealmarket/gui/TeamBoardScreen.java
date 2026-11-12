@@ -66,7 +66,7 @@ public class TeamBoardScreen extends Screen {
 
 	private void fetch() {
 		var req = HttpRequest.newBuilder(URI.create(MarketConfig.apiBase() + "/api/team/top"))
-				.timeout(Duration.ofSeconds(8)).header("X-Market-Key", MarketConfig.API_KEY)
+				.timeout(Duration.ofSeconds(8)).header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName()).header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (this.client == null) return;
@@ -97,7 +97,7 @@ public class TeamBoardScreen extends Screen {
 		clearAndInit();
 		String url = MarketConfig.apiBase() + "/api/team?name=" + URLEncoder.encode(team, StandardCharsets.UTF_8);
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY).header("X-User", MarketConfig.userName())
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).header("X-User", MarketConfig.userName())
 				.header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
 			if (this.client == null) return;
