@@ -70,7 +70,7 @@ public final class EnderShare {
 		try {
 			var req = HttpRequest.newBuilder(URI.create(MarketConfig.apiBase() + "/api/ec/report"))
 					.timeout(Duration.ofSeconds(8))
-					.header("X-Market-Key", MarketConfig.API_KEY)
+					.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 					.header("X-User", MarketConfig.userName())
 					.header("X-Token", MarketConfig.token())
 					.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)).build();
@@ -91,7 +91,7 @@ public final class EnderShare {
 		String url = MarketConfig.apiBase() + "/api/ec?player="
 				+ URLEncoder.encode(player == null ? "" : player, StandardCharsets.UTF_8);
 		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("X-Market-Key", MarketConfig.API_KEY)
+				.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.header("X-User", MarketConfig.userName())
 				.header("X-Token", MarketConfig.token()).GET().build();
 		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
