@@ -23,6 +23,8 @@ public final class MarketApi {
     private static volatile boolean requestInFlight;
     private static volatile long lastSync;
     private static volatile String lastError = "";
+    private static final java.util.concurrent.CopyOnWriteArrayList<Runnable> COMPLETIONS =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public record RemotePrice(long average, long low, long high, int samples, long lastSeen) {}
 
@@ -61,7 +63,8 @@ public final class MarketApi {
 
     public static void sync(Runnable completion) {
         if (!configured()) { if (completion != null) completion.run(); return; }
-        if (requestInFlight) { if (completion != null) completion.run(); return; }
+        if (completion != null) COMPLETIONS.add(completion);
+        if (requestInFlight) return;
         requestInFlight = true;
         lastSync = System.currentTimeMillis();
         CompletableFuture.runAsync(() -> {
@@ -89,7 +92,10 @@ public final class MarketApi {
                 lastError = safeError(e);
             } finally {
                 requestInFlight = false;
-                if (completion != null) completion.run();
+                for (Runnable callback : COMPLETIONS) {
+                    try { callback.run(); } catch (Exception ignored) {}
+                }
+                COMPLETIONS.clear();
             }
         });
     }
