@@ -194,12 +194,37 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             msg("HUD " + (SETTINGS.showHud ? "enabled" : "disabled"));
                             return 1;
                         })))
+                .then(ClientCommandManager.literal("data").executes(context -> {
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    if (client.player == null || client.getNetworkHandler() == null) {
+                        msg("Join Lifesteal Network before collecting data.");
+                        return 0;
+                    }
+                    MarketApi.sync();
+                    client.getNetworkHandler().sendChatCommand("bal");
+                    client.getNetworkHandler().sendChatCommand("orders");
+                    msg("Data collection started: refreshing shared prices, requesting your balance, and opening Custom Orders. Keep the menu open and visit each category/page; visible order prices are collected automatically. Inventory value updates in the background.");
+                    return 1;
+                }))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan (orders) | scan buy (AH auto-buy) | scan sell | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
+                    msg("/data or /ahsniper data | scan (orders) | scan buy (AH auto-buy) | scan sell | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
             )
         );
+
+        dispatcher.register(ClientCommandManager.literal("data").executes(context -> {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.getNetworkHandler() == null) {
+                msg("Join Lifesteal Network before collecting data.");
+                return 0;
+            }
+            MarketApi.sync();
+            client.getNetworkHandler().sendChatCommand("bal");
+            client.getNetworkHandler().sendChatCommand("orders");
+            msg("Data collection started: shared prices refreshing, balance requested, and Custom Orders opened. Keep the menu open and visit each category/page; visible order prices are collected automatically. Inventory value updates in the background.");
+            return 1;
+        }));
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             String line = message.getString();
