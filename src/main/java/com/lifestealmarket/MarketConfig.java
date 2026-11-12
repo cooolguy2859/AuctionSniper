@@ -25,12 +25,13 @@ public class MarketConfig {
 		return (!v.isEmpty() && !v.startsWith("$")) ? v : def;
 	}
 
-	private static final String DEFAULT = buildProp("apibase", "https://example.invalid");
+	private static final String CLOUD_API_BASE = "https://auction-sniper-api.firewolfjm10.workers.dev";
+	private static final String DEFAULT = buildProp("apibase", CLOUD_API_BASE);
 
 	private static final String DISCOVERY = buildProp("discovery", "");
 	public static String discoveryUrls() { return DISCOVERY; }
 
-	public static final String API_KEY = buildProp("apikey", "UNSET_BUILD_KEY");
+	public static final String API_KEY = buildProp("apikey", "728abd90e57d5d6b7f93f4746eb5765b8df17d470a7f14eabfa705b643b811ba");
 
 	public static final String BUILT_AT = buildProp("built", "unknown");
 
@@ -89,10 +90,7 @@ public class MarketConfig {
 		if (u.startsWith("https://discord.com/") || u.startsWith("https://discord.gg/")) requestUrl = u;
 	}
 
-	public static String apiBase() {
-		String l = localBase;
-		return l != null ? l : get().apiBase.replaceAll("/+$", "");
-	}
+	public static String apiBase() { return CLOUD_API_BASE; }
 
 	public String role = "seller";
 	public double guiSize = 1.0;
