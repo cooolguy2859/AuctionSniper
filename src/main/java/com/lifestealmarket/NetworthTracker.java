@@ -1013,6 +1013,25 @@ public class NetworthTracker {
 		return out;
 	}
 
+	private void uploadConfirmedSale(HistEntry entry) {
+		// Only AH history records explicitly marked "sold item" count as sales.
+		try {
+			var payload = new com.google.gson.JsonObject();
+			payload.addProperty("serverId", MarketConfig.serverId());
+			payload.addProperty("player", MarketConfig.userName());
+			payload.addProperty("type", "auction_sold");
+			payload.addProperty("item", entry.item());
+			payload.addProperty("price", entry.price());
+			payload.addProperty("quantity", entry.qty());
+			var req = java.net.http.HttpRequest.newBuilder(java.net.URI.create(MarketConfig.apiBase() + "/v1/events"))
+					.timeout(java.time.Duration.ofSeconds(8))
+					.header("Content-Type", "application/json")
+					.header("X-Market-Key", MarketConfig.API_KEY)
+					.POST(java.net.http.HttpRequest.BodyPublishers.ofString(payload.toString())).build();
+			HTTP.sendAsync(req, java.net.http.HttpResponse.BodyHandlers.discarding());
+		} catch (Exception ignored) {}
+	}
+
 	private void reconcileHistory(java.util.Collection<HistEntry> entries, boolean complete, long now) {
 		if (entries.isEmpty()) return;
 		NetworthData d = data();
@@ -1027,6 +1046,7 @@ public class NetworthTracker {
 			} else if (e.type().contains("sold item") || e.type().contains("deleted listing")) {
 				closers.add(new String[]{ e.item(), String.valueOf(e.price()) });
 				if (e.type().contains("sold item") && e.price() > 0 && !d.processed.contains(fp)) {
+					uploadConfirmedSale(e);
 					d.realizedProfit += e.price(); d.processed.add(fp); changed = true;
 					d.trades.add(new NetworthData.Trade(e.item(), e.price() / e.qty(), false, estTradeTime(e.createdAt(), now)));
 				}
