@@ -193,106 +193,99 @@ public class LifestealMarketClient implements ClientModInitializer {
 		});
 
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> {
-
-			dispatcher.register(ClientCommandManager.literal("lsmlink")
-					.then(ClientCommandManager.argument("code", com.mojang.brigadier.arguments.StringArgumentType.word())
-							.executes(ctx -> {
-								String code = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "code").trim();
-								linkDiscord(code);
-								return 1;
-							})));
-
-			for (String alias : new String[]{ "referral", "lsmref" })
-				dispatcher.register(ClientCommandManager.literal(alias)
-						.then(ClientCommandManager.argument("player", com.mojang.brigadier.arguments.StringArgumentType.word())
-								.executes(ctx -> {
-									creditReferrer(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "player").trim());
-									return 1;
-								}))
-						.executes(ctx -> { showReferralStatus(); return 1; }));
-
-			dispatcher.register(ClientCommandManager.literal("sellnow")
-					.executes(ctx -> {
-						MinecraftClient mc = MinecraftClient.getInstance();
-						mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.SellNowScreen(null)));
-						return 1;
-					}));
-
-			dispatcher.register(ClientCommandManager.literal("buynow")
-					.then(ClientCommandManager
-							.argument("item", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
-							.executes(ctx -> {
-								final String q = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "item").trim();
-								MinecraftClient mc = MinecraftClient.getInstance();
-								mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.BuyNowScreen(null, q)));
-								return 1;
-							}))
-					.executes(ctx -> {
-						MinecraftClient mc = MinecraftClient.getInstance();
-						mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.BuyNowScreen(null, "")));
-						return 1;
-					}));
-
-			for (String alias : new String[]{ "lsmarket", "marketgui", "prices" })
-				dispatcher.register(ClientCommandManager.literal(alias)
+			dispatcher.register(ClientCommandManager.literal("ahsniper")
+				.then(ClientCommandManager.literal("market").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.MarketScreen(null)));
+					return 1;
+				}))
+				.then(ClientCommandManager.literal("lsmarket").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.MarketScreen(null)));
+					return 1;
+				}))
+				.then(ClientCommandManager.literal("stock")
+					.then(ClientCommandManager.argument("item", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
 						.executes(ctx -> {
+							String item = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "item").trim();
 							MinecraftClient mc = MinecraftClient.getInstance();
-							mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.MarketScreen(null)));
+						mc.execute(() -> mc.setScreen(new StockScreen(null, item)));
 							return 1;
-						}));
-
-			for (String alias : new String[]{ "customize", "wardrobe" })
-				dispatcher.register(ClientCommandManager.literal(alias)
-						.executes(ctx -> {
-							MinecraftClient mc = MinecraftClient.getInstance();
-							mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.CustomizeScreen(null)));
-							return 1;
-						}));
-
-			for (String alias : new String[]{ "lsmshop", "themeshop", "lsmthemes" })
-				dispatcher.register(ClientCommandManager.literal(alias)
-						.executes(ctx -> {
-							MinecraftClient mc = MinecraftClient.getInstance();
-							mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.ShopScreen(null)));
-							return 1;
-						}));
-			dispatcher.register(ClientCommandManager.literal("stock")
-					.then(ClientCommandManager
-							.argument("item", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
-							.executes(ctx -> {
-								String item = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "item").trim();
-								if (item.length() >= 2 && item.startsWith("\"") && item.endsWith("\"")) {
-									item = item.substring(1, item.length() - 1).trim();
-								}
-								final String q = item;
-								MinecraftClient mc = MinecraftClient.getInstance();
-								mc.execute(() -> mc.setScreen(new StockScreen(null, q)));
-								return 1;
-							}))
+					}))
 					.executes(ctx -> {
 						MinecraftClient mc = MinecraftClient.getInstance();
 						mc.execute(() -> mc.setScreen(new StockScreen(null, "")));
 						return 1;
-					}));
-			dispatcher.register(ClientCommandManager.literal("networth")
+					}))
+				.then(ClientCommandManager.literal("networth")
 					.then(ClientCommandManager.argument("player", com.mojang.brigadier.arguments.StringArgumentType.word())
-							.suggests((ctx, builder) -> {
-
-								for (String n : NetworthTracker.INSTANCE.publicPlayerNames())
-									if (n.toLowerCase().startsWith(builder.getRemainingLowerCase())) builder.suggest(n);
-								return builder.buildFuture();
-							})
-							.executes(ctx -> {
-								lookupNetworth(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "player")); return 1; }))
+						.suggests((ctx, builder) -> {
+							for (String n : NetworthTracker.INSTANCE.publicPlayerNames())
+								if (n.toLowerCase().startsWith(builder.getRemainingLowerCase())) builder.suggest(n);
+							return builder.buildFuture();
+						})
+						.executes(ctx -> {
+							lookupNetworth(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "player"));
+							return 1;
+						}))
 					.executes(ctx -> {
 						MinecraftClient mc = MinecraftClient.getInstance();
 						mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.NetworthScreen(null)));
 						return 1;
-					}));
-
-			shortcut(dispatcher, "style", () -> new com.lifestealmarket.gui.CustomizeScreen(null));
-			shortcut(dispatcher, "board", () -> new com.lifestealmarket.gui.LeaderboardScreen(null));
-
+					}))
+				.then(ClientCommandManager.literal("buy")
+					.then(ClientCommandManager.argument("item", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
+						.executes(ctx -> {
+							String q = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "item").trim();
+							MinecraftClient mc = MinecraftClient.getInstance();
+						mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.BuyNowScreen(null, q)));
+							return 1;
+					}))
+					.executes(ctx -> {
+						MinecraftClient mc = MinecraftClient.getInstance();
+						mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.BuyNowScreen(null, "")));
+						return 1;
+					}))
+				.then(ClientCommandManager.literal("sell").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.SellNowScreen(null)));
+					return 1;
+				}))
+				.then(ClientCommandManager.literal("shop").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.ShopScreen(null)));
+					return 1;
+				}))
+				.then(ClientCommandManager.literal("customize").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.CustomizeScreen(null)));
+					return 1;
+				}))
+				.then(ClientCommandManager.literal("leaderboard").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					mc.execute(() -> mc.setScreen(new com.lifestealmarket.gui.LeaderboardScreen(null)));
+					return 1;
+				}))
+				.then(ClientCommandManager.literal("link")
+					.then(ClientCommandManager.argument("code", com.mojang.brigadier.arguments.StringArgumentType.word())
+						.executes(ctx -> {
+							linkDiscord(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "code").trim());
+							return 1;
+					})))
+				.then(ClientCommandManager.literal("referral")
+					.then(ClientCommandManager.argument("player", com.mojang.brigadier.arguments.StringArgumentType.word())
+						.executes(ctx -> {
+							creditReferrer(com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "player").trim());
+							return 1;
+					}))
+					.executes(ctx -> { showReferralStatus(); return 1; }))
+				.then(ClientCommandManager.literal("help").executes(ctx -> {
+					MinecraftClient mc = MinecraftClient.getInstance();
+					if (mc.player != null) mc.player.sendMessage(net.minecraft.text.Text.literal(
+							"§b[AuctionSniper] §fmarket, stock [item], networth [player], buy [item], sell, shop, customize, leaderboard, link <code>, referral [player]"), false);
+					return 1;
+				}))
+			);
 		});
 	}
 
