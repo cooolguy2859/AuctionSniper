@@ -82,7 +82,7 @@ public class MarketScreen extends Screen {
 				tickers = sortedT;
 				vals = sortedV;
 				status = sortedT.isEmpty()
-						? "No shared prices yet — scan auctions to collect prices."
+						? (MarketApi.lastError().isBlank() ? "No shared prices yet — scan auctions to collect prices." : "Backend unavailable: " + MarketApi.lastError())
 					: "";
 			});
 		});
