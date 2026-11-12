@@ -14,15 +14,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Reads visible custom-order summaries from the server's /orders menu.
- * It records average order value (total value / current order count), not a
- * per-item unit price, because the menu does not expose order quantities.
+ * Collects individual order prices from the visible /orders Custom Orders menu.
+ * Order entries expose their details in item lore: "Price: ... Coins per unit".
+ * Summary entries ("Total value" / "current orders") are deliberately not used
+ * as item prices because they are aggregate values, not unit prices.
  */
 public final class OrderScanner {
+    private static final Pattern UNIT_PRICE = Pattern.compile(
+            "(?i)price\\s*:\\s*([0-9][0-9,.]*\\s*[kmb]?)\\s*coins?\\s*per\\s*unit");
     private static final Pattern TOTAL = Pattern.compile(
-            "(?i)total\\s*value\\s*:\\s*([0-9][0-9,.]*\\s*[kmb]?)\\s*coins?");
-    private static final Pattern COUNT = Pattern.compile(
-            "(?i)\\(([0-9][0-9,]*)\\s*current\\s*orders?\\)");
+            "(?i)total\\s*:\\s*([0-9][0-9,.]*\\s*[kmb]?)\\s*coins?");
+    private static final Pattern PROGRESS = Pattern.compile(
+            "(?i)progress\\s*:\\s*([0-9,]+)\\s*/\\s*([0-9,]+)");
     private static final Set<String> SEEN = new HashSet<>();
     private static long lastScan;
     private static int recorded;
@@ -37,45 +40,60 @@ public final class OrderScanner {
         if (client.player == null || !(client.currentScreen instanceof HandledScreen<?>)) return;
         String title = client.currentScreen.getTitle().getString().toLowerCase(Locale.ROOT);
         if (!title.contains("custom orders")) return;
+
         long now = System.currentTimeMillis();
-        if (now - lastScan < 900L) return;
+        if (now - lastScan < 700L) return;
         lastScan = now;
 
         ScreenHandler handler = client.player.currentScreenHandler;
         int menuSlots = Math.max(0, handler.slots.size() - 36);
         int pageRecorded = 0;
+        int orderEntriesSeen = 0;
+
         for (int i = 0; i < menuSlots; i++) {
             ItemStack stack = handler.slots.get(i).getStack();
             if (stack.isEmpty()) continue;
+
             var lore = stack.get(net.minecraft.component.DataComponentTypes.LORE);
-            if (lore == null) continue;
+            if (lore == null || lore.lines().isEmpty()) continue;
+
             StringBuilder lines = new StringBuilder();
             for (Text line : lore.lines()) lines.append(' ').append(line.getString());
-            Matcher totalMatch = TOTAL.matcher(lines);
-            Matcher countMatch = COUNT.matcher(lines);
-            if (!totalMatch.find() || !countMatch.find()) continue;
+            String detail = lines.toString();
 
-            long total = parseAmount(totalMatch.group(1));
-            long count;
-            try { count = Long.parseLong(countMatch.group(1).replace(",", "")); }
-            catch (NumberFormatException ignored) { continue; }
-            if (total <= 0 || count <= 0) continue;
+            Matcher priceMatch = UNIT_PRICE.matcher(detail);
+            if (!priceMatch.find()) continue;
+            orderEntriesSeen++;
 
-            long averageOrderValue = Math.max(1L, total / count);
+            long unitPrice = parseAmount(priceMatch.group(1));
+            if (unitPrice <= 0) continue;
+
+            Matcher totalMatch = TOTAL.matcher(detail);
+            long total = -1L;
+            if (totalMatch.find()) total = parseAmount(totalMatch.group(1));
+
+            Matcher progressMatch = PROGRESS.matcher(detail);
+            String progress = progressMatch.find()
+                    ? progressMatch.group(1) + "/" + progressMatch.group(2) : "unknown";
+
             String itemName = stack.getName().getString();
             String itemId = PriceTracker.itemKey(stack);
-            String fingerprint = itemId + "|" + total + "|" + count;
+            String fingerprint = itemId + "|unit=" + unitPrice + "|total=" + total + "|progress=" + progress;
             if (!SEEN.add(fingerprint)) continue;
 
-            PriceTracker.observe(itemId, averageOrderValue);
-            MarketApi.observe(itemId, itemName, averageOrderValue);
+            PriceTracker.observe(itemId, unitPrice);
+            MarketApi.observe(itemId, itemName, unitPrice);
             pageRecorded++;
             recorded++;
         }
+
         if (pageRecorded > 0) {
             PriceTracker.flush();
-            AuctionSniperClient.msg("Orders scanned: recorded " + pageRecorded
-                    + " new average order values (" + recorded + " total this session).");
+            AuctionSniper.msg("Orders scan: collected " + pageRecorded
+                    + " new per-unit prices (" + recorded + " total this session).");
+        } else if (orderEntriesSeen > 0) {
+            AuctionSniper.msg("Orders scan: found " + orderEntriesSeen
+                    + " order entries, but no new prices to add.");
         }
     }
 
