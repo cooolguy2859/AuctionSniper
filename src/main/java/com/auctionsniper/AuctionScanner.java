@@ -203,17 +203,15 @@ public final class AuctionScanner {
             String key = PriceTracker.itemKey(stack);
             String observation = fingerprint + "|" + i + "|" + key + "|" + price;
             boolean fresh = observedListings.add(observation);
-            Long average = PriceTracker.average(key);
-            MarketApi.RemotePrice sharedPrice = MarketApi.price(key);
-            if (average == null && sharedPrice != null) average = sharedPrice.average();
+            DealAdvisor.Assessment advice = DealAdvisor.assess(key, itemName, price);
             if (fresh && autoBuyEnabled
                     && totalSpentThisRun <= AuctionSniperClient.SETTINGS.maxBudget
                     && price <= AuctionSniperClient.SETTINGS.maxBudget - totalSpentThisRun
-                    && (PriceTracker.sampleCount(key) >= 8 || (sharedPrice != null && sharedPrice.samples() >= 8)) && average != null
                     && price <= AuctionSniperClient.SETTINGS.maxBudget
                     && AuctionSniperClient.getOwnBalance() >= price
-                    && average > price
-                    && average - price >= AuctionSniperClient.SETTINGS.minimumProfit
+                    && advice.eligible()
+                    && advice.confidence() >= 50
+                    && advice.estimatedProfit() >= AuctionSniperClient.SETTINGS.minimumProfit
                     && isSafeListingName(itemName)
                     && attemptedListings.add(key + "|" + price)) {
                 if (client.interactionManager != null) {
@@ -223,7 +221,7 @@ public final class AuctionScanner {
                     awaitingBuyConfirmation = true;
                     client.interactionManager.clickSlot(handler.syncId, i, 0, SlotActionType.PICKUP, client.player);
                     waitTicks = 6;
-                    AuctionSniperClient.msg("Opening purchase confirmation for " + itemName + " at " + price + " coins.");
+                    AuctionSniperClient.msg("Deal Advisor approved " + itemName + ": estimated profit " + advice.estimatedProfit() + " coins, confidence " + advice.confidence() + "%. Opening confirmation.");
                     return;
                 }
             }
