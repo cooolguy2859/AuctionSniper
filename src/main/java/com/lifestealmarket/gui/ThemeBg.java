@@ -108,7 +108,7 @@ public final class ThemeBg {
 			try {
 				String url = MarketConfig.apiBase() + "/api/art?key=" + key;
 				HttpRequest req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-						.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
+						.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 				HttpResponse<byte[]> resp = HTTP.send(req, HttpResponse.BodyHandlers.ofByteArray());
 				if (resp.statusCode() == 404) { RETRY.put(key, System.currentTimeMillis() + 600_000L); return; }
 				if (resp.statusCode() != 200 || resp.body() == null || resp.body().length == 0) return;
