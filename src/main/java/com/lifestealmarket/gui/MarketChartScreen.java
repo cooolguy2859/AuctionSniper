@@ -2,6 +2,7 @@ package com.lifestealmarket.gui;
 
 import com.lifestealmarket.Coins;
 import com.lifestealmarket.MarketConfig;
+import com.auctionsniper.AuctionSniperClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -84,44 +85,61 @@ public class MarketChartScreen extends Screen {
 	}
 
 	private void fetch() {
-		String url = MarketConfig.apiBase() + "/api/market/series?ticker="
-				+ URLEncoder.encode(ticker, StandardCharsets.UTF_8) + "&range=" + range;
-		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY)
-				.header("X-User", MarketConfig.userName()).header("X-Token", MarketConfig.token()).GET().build();
-		nextRefresh = System.currentTimeMillis() + 30_000L;
-		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
-			if (this.client == null) return;
-			if (err != null || resp.statusCode() != 200) {
-				this.client.execute(() -> status = "Couldn't load — is the market up?");
-				return;
-			}
-			try {
-				var o = com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject();
-				var arr = o.getAsJsonArray("points");
-				long[][] p = new long[arr.size()][2];
-				for (int i = 0; i < arr.size(); i++) {
-					var pair = arr.get(i).getAsJsonArray();
-					p[i][0] = pair.get(0).getAsLong();
-					p[i][1] = pair.get(1).getAsLong();
+		if (!AuctionSniperClient.SETTINGS.cloudApiKey.isBlank()) {
+			String base = AuctionSniperClient.SETTINGS.cloudApiUrl.replaceAll("/+$", "");
+			String server = URLEncoder.encode(AuctionSniperClient.SETTINGS.serverId, StandardCharsets.UTF_8);
+			String item = URLEncoder.encode(ticker, StandardCharsets.UTF_8);
+			String url = base + "/v1/history?serverId=" + server + "&itemId=" + item;
+			var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
+					.header("Authorization", "Bearer " + AuctionSniperClient.SETTINGS.cloudApiKey)
+					.header("Accept", "application/json").GET().build();
+			nextRefresh = System.currentTimeMillis() + 30_000L;
+			HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
+				if (this.client == null) return;
+				if (err != null || resp.statusCode() != 200) {
+					this.client.execute(() -> status = "Cloud market unavailable — check /ahsniper cloud status.");
+					return;
 				}
-				this.client.execute(() -> {
-					points = p;
-					ask = o.get("ask").getAsLong();
-					supply = o.has("supply") ? o.get("supply").getAsLong() : -1;
-					orders = o.has("orders") ? o.get("orders").getAsLong() : -1;
-					high = o.get("high").getAsLong(); low = o.get("low").getAsLong(); avg = o.get("avg").getAsLong();
-					updated = o.has("updated") ? o.get("updated").getAsLong() : 0;
-					chg = o.get("chg").getAsDouble();
-					status = p.length == 0
-							? (ask > 0 ? "Only today's price so far — the line starts filling from now."
-							           : "No /market price recorded for this item yet.")
-							: "";
-				});
-			} catch (Exception e) { this.client.execute(() -> status = "Bad data."); }
-		});
+				try {
+					var root = com.google.gson.JsonParser.parseString(resp.body()).getAsJsonObject();
+					var arr = root.getAsJsonArray("history");
+					java.util.ArrayList<long[]> rows = new java.util.ArrayList<>();
+					long sum = 0, hi = 0, lo = Long.MAX_VALUE, latest = 0;
+					for (var el : arr) {
+						var o = el.getAsJsonObject();
+						long price = o.get("price").getAsLong();
+						long time = o.get("observedAt").getAsLong();
+						long cutoff = switch (range) {
+							case "1d" -> System.currentTimeMillis() - 86_400_000L;
+							case "7d" -> System.currentTimeMillis() - 604_800_000L;
+						case "30d" -> System.currentTimeMillis() - 2_592_000_000L;
+						default -> 0L;
+						};
+						if (time < cutoff) continue;
+						rows.add(new long[]{time, price});
+						sum += price; hi = Math.max(hi, price); lo = Math.min(lo, price);
+						latest = Math.max(latest, time);
+					}
+					rows.sort(java.util.Comparator.comparingLong(x -> x[0]));
+					long[][] p = rows.toArray(new long[0][]);
+					long average = rows.isEmpty() ? 0 : sum / rows.size();
+					long lowValue = rows.isEmpty() ? 0 : lo;
+					long highValue = hi;
+					long current = rows.isEmpty() ? 0 : rows.get(rows.size() - 1)[1];
+					this.client.execute(() -> {
+						points = p; ask = current; supply = -1; orders = -1;
+						high = highValue; low = lowValue; avg = average; updated = latest; chg = 0;
+						status = p.length == 0 ? "No recorded price history yet — scan auctions first." : "";
+					});
+				} catch (Exception e) {
+					this.client.execute(() -> status = "Could not read shared price history.");
+				}
+			});
+			return;
+		}
+		status = "Cloud API key missing — configure auction-sniper.properties.";
+		nextRefresh = System.currentTimeMillis() + 30_000L;
 	}
-
 	@Override
 	public void tick() {
 		if (System.currentTimeMillis() >= nextRefresh) fetch();
