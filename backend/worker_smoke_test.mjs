@@ -8,6 +8,10 @@ const { default: worker } = await import(
 
 const queries = [];
 const DB = {
+  async batch(statements) {
+    queries.push({ action: "batch", count: statements.length });
+    return statements.map(() => ({ success: true }));
+  },
   prepare(sql) {
     return {
       bind(...params) {
