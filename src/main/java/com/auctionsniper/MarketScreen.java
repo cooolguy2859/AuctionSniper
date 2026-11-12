@@ -12,7 +12,7 @@ import java.util.Map;
 
 /** Custom AuctionSniper market dashboard, styled after the supplied dark navy/cyan references. */
 public final class MarketScreen extends Screen {
-    private static final String[] TABS = {"Today", "Stock", "Market", "Buy", "Sell", "Calc", "History", "Worth", "Board", "Shop", "Style"};
+    private static final String[] TABS = {"Today", "Stock", "Market", "Buy", "Sell", "Calc", "History", "Worth", "Board", "Shop", "Style", "Owned"};
     private static int BG = 0xFF101F29;
     private static int PANEL = 0xFF1B3440;
     private static int PANEL_DARK = 0xFF122630;
@@ -123,7 +123,9 @@ public final class MarketScreen extends Screen {
         text(ctx, tab + (selectedTab == 1 ? "  /  AUCTION PRICE TRACKER" : "  /  AUCTIONSNIPER"), mainX + 16, contentTop + 14, CYAN);
         text(ctx, "Saved price observations: " + PriceTracker.pricedListings(), mainX + 16, contentTop + 34, MUTED);
 
-        if (selectedTab == 1 || selectedTab == 6 || selectedTab == 0) {
+        if (selectedTab == 11) {
+            drawOwned(ctx, mainX, contentTop, mainW, contentBottom);
+        } else if (selectedTab == 1 || selectedTab == 6 || selectedTab == 0) {
             drawStock(ctx, mainX, contentTop, mainW, contentBottom);
         } else if (selectedTab == 7 || selectedTab == 8) {
             drawWorth(ctx, mainX, contentTop, mainW);
@@ -172,6 +174,46 @@ public final class MarketScreen extends Screen {
             text(ctx, "SAMPLES  " + values.size(), x + 18, statsY + 43, MUTED);
         }
         text(ctx, "AH price history is collected from listing tooltips.", x + 18, bottom - 27, MUTED);
+    }
+
+    private void drawOwned(DrawContext ctx, int x, int y, int w, int bottom) {
+        text(ctx, "YOUR PURCHASED ITEMS", x + 18, y + 72, CYAN);
+        text(ctx, "Confirmed buys are saved locally and compared with new AH observations.", x + 18, y + 94, MUTED);
+        var owned = new ArrayList<>(PriceTracker.purchases().entrySet());
+        owned.sort((a, b) -> Long.compare(b.getValue().totalCost(), a.getValue().totalCost()));
+        if (owned.isEmpty()) {
+            text(ctx, "No confirmed purchases tracked yet.", x + 18, y + 132, MUTED);
+            text(ctx, "Auto-buy purchases are added after the server confirms them.", x + 18, y + 154, MUTED);
+            return;
+        }
+        int lineY = y + 126;
+        text(ctx, "ITEM", x + 18, lineY, MUTED);
+        text(ctx, "QTY", x + w / 2, lineY, MUTED);
+        text(ctx, "AVG PAID", x + w / 2 + 55, lineY, MUTED);
+        text(ctx, "LATEST", x + w - 155, lineY, MUTED);
+        text(ctx, "CHANGE", x + w - 80, lineY, MUTED);
+        lineY += 22;
+        for (var entry : owned) {
+            if (lineY > bottom - 26) break;
+            String name = displayName(entry.getKey());
+            if (name.length() > 20) name = name.substring(0, 17) + "...";
+            PriceTracker.PurchaseRecord record = entry.getValue();
+            Long latest = PriceTracker.latest(entry.getKey());
+            text(ctx, name, x + 18, lineY, 0xFFFFFFFF);
+            text(ctx, Long.toString(record.quantity()), x + w / 2, lineY, 0xFFFFFFFF);
+            text(ctx, money(record.averagePaid()), x + w / 2 + 55, lineY, CYAN);
+            text(ctx, latest == null ? "—" : money(latest), x + w - 155, lineY, 0xFFFFFFFF);
+            if (latest == null) {
+                text(ctx, "NO DATA", x + w - 80, lineY, MUTED);
+            } else {
+                long delta = latest - record.averagePaid();
+                int color = delta > 0 ? 0xFFFF7777 : delta < 0 ? GREEN : MUTED;
+                String prefix = delta > 0 ? "+" : "";
+                text(ctx, prefix + money(delta), x + w - 80, lineY, color);
+            }
+            lineY += 23;
+        }
+        text(ctx, "Change compares latest observed listing price with your average paid price; it is an estimate, not a completed-sale value.", x + 18, bottom - 24, MUTED);
     }
 
     private void drawLine(DrawContext ctx, int x1, int y1, int x2, int y2, int color) {
