@@ -56,8 +56,11 @@ public final class MarketApi {
         });
     }
 
-    public static void sync() {
-        if (!configured() || requestInFlight) return;
+    public static void sync() { sync(null); }
+
+    public static void sync(Runnable completion) {
+        if (!configured()) { if (completion != null) completion.run(); return; }
+        if (requestInFlight) { if (completion != null) completion.run(); return; }
         requestInFlight = true;
         lastSync = System.currentTimeMillis();
         CompletableFuture.runAsync(() -> {
@@ -83,8 +86,13 @@ public final class MarketApi {
                 lastError = safeError(e);
             } finally {
                 requestInFlight = false;
+                if (completion != null) completion.run();
             }
         });
+    }
+
+    public static Map<String, RemotePrice> snapshot() {
+        return Map.copyOf(REMOTE);
     }
 
     public static RemotePrice price(String itemId) {
