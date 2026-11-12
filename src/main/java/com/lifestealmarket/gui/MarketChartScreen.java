@@ -125,10 +125,11 @@ public class MarketChartScreen extends Screen {
 					long average = rows.isEmpty() ? 0 : sum / rows.size();
 					long lowValue = rows.isEmpty() ? 0 : lo;
 					long highValue = hi;
+					long updatedValue = latest;
 					long current = rows.isEmpty() ? 0 : rows.get(rows.size() - 1)[1];
 					this.client.execute(() -> {
 						points = p; ask = current; supply = -1; orders = -1;
-						high = highValue; low = lowValue; avg = average; updated = latest; chg = 0;
+						high = highValue; low = lowValue; avg = average; updated = updatedValue; chg = 0;
 						status = p.length == 0 ? "No recorded price history yet — scan auctions first." : "";
 					});
 				} catch (Exception e) {
