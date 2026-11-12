@@ -214,7 +214,7 @@ public final class TeamTracker {
 		try {
 			var req = HttpRequest.newBuilder(URI.create(MarketConfig.apiBase() + "/api/team/report"))
 					.timeout(Duration.ofSeconds(8))
-					.header("X-Market-Key", MarketConfig.API_KEY)
+					.header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 					.header("X-User", MarketConfig.userName())
 					.header("X-Token", MarketConfig.token())
 					.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)).build();
