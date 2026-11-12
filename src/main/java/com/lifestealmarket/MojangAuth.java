@@ -48,7 +48,7 @@ public final class MojangAuth {
 
 		var chReq = HttpRequest.newBuilder(URI.create(base + "/api/auth/challenge?user="
 						+ java.net.URLEncoder.encode(ign, StandardCharsets.UTF_8)))
-				.timeout(Duration.ofSeconds(10)).header("X-Market-Key", MarketConfig.API_KEY).GET().build();
+				.timeout(Duration.ofSeconds(10)).header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId()).GET().build();
 		var chResp = LifestealMarketClient.HTTP.send(chReq, HttpResponse.BodyHandlers.ofString());
 		if (chResp.statusCode() != 200) { backOff(); return; }
 		String nonce = com.google.gson.JsonParser.parseString(chResp.body()).getAsJsonObject()
@@ -67,7 +67,7 @@ public final class MojangAuth {
 		}
 
 		var vReq = HttpRequest.newBuilder(URI.create(base + "/api/auth/verify"))
-				.timeout(Duration.ofSeconds(15)).header("X-Market-Key", MarketConfig.API_KEY)
+				.timeout(Duration.ofSeconds(15)).header("X-Market-Key", MarketConfig.API_KEY).header("X-Server-Id", MarketConfig.serverId())
 				.POST(HttpRequest.BodyPublishers.ofString(nonce, StandardCharsets.UTF_8)).build();
 		var vResp = LifestealMarketClient.HTTP.send(vReq, HttpResponse.BodyHandlers.ofString());
 		if (vResp.statusCode() != 200) {
