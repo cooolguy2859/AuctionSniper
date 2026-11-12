@@ -35,37 +35,33 @@ public final class AuctionSniperClient implements ClientModInitializer {
             dispatcher.register(ClientCommandManager.literal("ahsniper")
                 .then(ClientCommandManager.literal("scan")
                     .executes(context -> {
-                        AuctionScanner.startScan();
+                        MinecraftClient client = MinecraftClient.getInstance();
+                        if (client.player == null || client.getNetworkHandler() == null) {
+                            msg("Join Lifesteal Network before scanning custom orders.");
+                            return 0;
+                        }
+                        client.getNetworkHandler().sendChatCommand("orders");
+                        msg("Custom Orders scan started. OrderScanner will collect visible per-unit prices and order details.");
                         return 1;
                     })
                     .then(ClientCommandManager.literal("buy").executes(context -> {
                         MinecraftClient client = MinecraftClient.getInstance();
-                        if (client.getNetworkHandler() == null) {
-                            msg("Join Lifesteal Network before scanning buy orders.");
+                        if (client.player == null || client.getNetworkHandler() == null) {
+                            msg("Join Lifesteal Network before starting the Auction House auto-buy scan.");
                             return 0;
                         }
-                        client.getNetworkHandler().sendChatCommand("orders");
-                        msg("Buy-order scan started. Keep the Custom Orders menu open and visit each page; visible order totals will be collected automatically.");
+                        if (AuctionScanner.isScanning()) {
+                            msg("Auction House scan already running. Use /ahsniper cancel first.");
+                            return 0;
+                        }
+                        AuctionScanner.setAutoBuyEnabled(true);
+                        AuctionScanner.startScan();
+                        msg("Auction House auto-buy scan started. It scans /ah and checks listings against your profit and budget settings.");
                         return 1;
                     }))
                     .then(ClientCommandManager.literal("sell").executes(context -> {
                         msg("Sell-listing scan started. The Auction House scanner will collect visible listing prices across pages.");
                         AuctionScanner.startScan();
-                        return 1;
-                    }))
-                    .then(ClientCommandManager.literal("autobuy").executes(context -> {
-                        MinecraftClient client = MinecraftClient.getInstance();
-                        if (client.player == null || client.getNetworkHandler() == null) {
-                            msg("Join Lifesteal Network before starting an auto-buy scan.");
-                            return 0;
-                        }
-                        if (AuctionScanner.isScanning()) {
-                            msg("A scan is already running. Use /ahsniper cancel first.");
-                            return 0;
-                        }
-                        AuctionScanner.setAutoBuyEnabled(true);
-                        AuctionScanner.startScan();
-                        msg("Auto-buy scan started. Eligible listings may be purchased automatically within your configured profit and budget limits. Use /ahsniper cancel to stop.");
                         return 1;
                     })))
                 .then(ClientCommandManager.literal("balance")
@@ -199,7 +195,7 @@ public final class AuctionSniperClient implements ClientModInitializer {
                             return 1;
                         })))
                 .then(ClientCommandManager.literal("help").executes(context -> {
-                    msg("/ahsniper scan | scan buy | scan sell | scan autobuy | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
+                    msg("/ahsniper scan (orders) | scan buy (AH auto-buy) | scan sell | cancel | status | gui | autobuy on|off | balance enable|disable|refresh|status|clear | cloud status|sync | profit min <amount> | budget <amount|balance> | hud <true|false> | orders | market | alert <price>");
                     return 1;
                 }))
             )
