@@ -287,7 +287,10 @@ public class NetworthTracker {
 
 	public static boolean isHomeServer(MinecraftClient client) {
 		var s = client.getCurrentServerEntry();
-		return s != null && s.address != null && s.address.toLowerCase().contains(HOME_SERVER);
+		if (s == null || s.address == null) return false;
+		String address = s.address.toLowerCase(Locale.ROOT);
+		String configured = MarketConfig.serverId().toLowerCase(Locale.ROOT);
+		return address.contains(HOME_SERVER) || (!configured.isBlank() && address.contains(configured));
 	}
 
 	public static String tabFooter(MinecraftClient client) {
