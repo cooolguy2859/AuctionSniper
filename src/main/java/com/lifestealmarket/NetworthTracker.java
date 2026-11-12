@@ -898,7 +898,7 @@ public class NetworthTracker {
 		if (sniperMenuBusy()) return;
 		if (System.currentTimeMillis() < playerMenuUntil) return;
 
-		if (MarketConfig.get().shareEnderchest && !MarketConfig.get().ecCmdDenied && !ecTried
+		if (!MarketConfig.get().ecCmdDenied && !ecTried
 				&& data().ecSlots.isEmpty()) {
 			ecTried = true;
 			startHeadless(client, now, 2, "ender chest", "ec");
@@ -1059,7 +1059,13 @@ public class NetworthTracker {
 			if (any) return composed;
 		}
 
-		return resolve(priceByBase, norm(baseName(item)), now);
+		long basePrice = resolve(priceByBase, norm(baseName(item)), now);
+		if (basePrice >= 0) return basePrice;
+
+		com.auctionsniper.MarketApi.RemotePrice shared = com.auctionsniper.MarketApi.price(item);
+		if (shared == null && cut > 0) shared = com.auctionsniper.MarketApi.price(baseName(item));
+		if (shared != null && shared.average() > 0 && shared.samples() > 0) return shared.average();
+		return -1;
 	}
 
 	private long resolve(Map<String, long[]> map, String key, long now) {
