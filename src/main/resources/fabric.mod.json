@@ -5,7 +5,10 @@
   "name": "AuctionSniper by Rem",
   "description": "AuctionSniper market tools, auction scanning, price history, and net-worth features.",
   "environment": "client",
-  "entrypoints": { "client": ["com.auctionsniper.AuctionSniperClient", "com.lifestealmarket.LifestealMarketClient"] },
+  "entrypoints": {
+    "client": ["com.auctionsniper.AuctionSniperClient", "com.lifestealmarket.LifestealMarketClient"],
+    "mod-control-center": ["com.auctionsniper.ControlCenterBridge"]
+  },
   "mixins": [{ "config": "lifestealmarket.client.mixins.json", "environment": "client" }],
   "depends": { "fabricloader": ">=0.19.3", "minecraft": "~1.21.11", "java": ">=21", "fabric-api": "*" },
   "authors": ["Rem", "Timtim", "Rizzuku"]
