@@ -161,7 +161,7 @@ public class BuyNowScreen extends Screen {
 			if (!Venues.ready()) {
 				for (int i = 0; i < 4; i++) Ui.shimmerCard(ctx, cl, y + i * 17, 220, 13);
 			} else if (Venues.allNames().length == 0) {
-				ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8No shared items yet — scan auctions to collect prices."), cl, y, 0xFFFFFFFF);
+				ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8" + (Venues.lastError().isEmpty() ? "No shared items yet — scan auctions to collect prices." : "Backend unavailable: " + Venues.lastError())), cl, y, 0xFFFFFFFF);
 			} else if (q.trim().isEmpty()) {
 				ctx.drawTextWithShadow(this.textRenderer, Text.literal("§8Type an item name above…"), cl, y, 0xFFFFFFFF);
 			} else if (matches.isEmpty()) {
