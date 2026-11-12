@@ -1,11 +1,14 @@
 # Credits
 
-- **TheyHating** — Original Lifesteal Market author and copyright holder. Source code used and adapted in AuctionSniper with direct permission confirmed on November 11, 2026. Original copyright and license notices are retained.
-- **rizzuku** — Lifesteal Market contributor/co-author; explicitly approved use and modification of the code, including distribution, with credit.
-- AuctionSniper contributors.
+## AuctionSniper
+- **Rem** — Project lead and main AuctionSniper developer.
+- **Timtim** — AuctionSniper contributor.
+- **Rizzuku** — AuctionSniper contributor and original Lifesteal Market co-author.
 
-## Permission
+## Third-party source attribution
+- **TheyHating** — Original Lifesteal Market author and copyright holder. Their source code is incorporated and modified with direct permission confirmed on November 11, 2026.
+- **Rizzuku** — Original Lifesteal Market contributor/co-author; explicitly approved use, modification, and distribution with credit.
 
-TheyHating and rizzuku both explicitly granted permission in direct messages on November 11, 2026, for AuctionSniper to fully use, modify, and distribute Lifesteal Market code, on the condition that both are credited. Screenshots of those permissions are retained by the project owner.
+The original Lifesteal Market license and copyright notice are retained in `LICENSE`. Permission to incorporate, modify, and distribute the source was explicitly granted by TheyHating and Rizzuku in direct messages on November 11, 2026, on the condition that both are credited.
 
 Original source repository: https://github.com/tomdamjan1-collab/Lifesteal-Market
