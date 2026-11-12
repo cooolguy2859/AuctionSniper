@@ -2,6 +2,7 @@ package com.lifestealmarket.gui;
 
 import com.lifestealmarket.Coins;
 import com.lifestealmarket.MarketConfig;
+import com.auctionsniper.MarketApi;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -56,34 +57,36 @@ public class MarketScreen extends Screen {
 	}
 
 	private void fetch() {
-		String url = MarketConfig.apiBase() + "/api/market";
-		var req = HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(8))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", MarketConfig.API_KEY).GET().build();
-		HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
-
+		if (!MarketApi.configured()) {
+			status = "Cloud API key missing — configure auction-sniper.properties";
+			return;
+		}
+		status = "Loading shared market prices…";
+		MarketApi.sync(() -> {
 			if (this.client == null) return;
-			if (err != null || resp.statusCode() != 200) {
-				this.client.execute(() -> status = "Couldn't load — is the market up?");
-				return;
-			}
-			try {
-				var arr = com.google.gson.JsonParser.parseString(resp.body()).getAsJsonArray();
-				List<String> t = new ArrayList<>(); List<long[]> v = new ArrayList<>();
-				for (var el : arr) {
-					var o = el.getAsJsonObject();
-					t.add(o.get("ticker").getAsString());
-					v.add(new long[]{ o.get("ask").getAsLong(),
-							o.has("supply") ? o.get("supply").getAsLong() : 0,
-							o.has("orders") ? o.get("orders").getAsLong() : 0 });
+			this.client.execute(() -> {
+				var snapshot = MarketApi.snapshot();
+				List<String> t = new ArrayList<>();
+				List<long[]> v = new ArrayList<>();
+				for (var entry : snapshot.entrySet()) {
+					t.add(entry.getKey());
+					var price = entry.getValue();
+					v.add(new long[]{ price.average(), price.samples(), 0 });
 				}
-				this.client.execute(() -> {
-					tickers = t; vals = v;
-					status = t.isEmpty() ? "No market items yet — the scanner fills this in." : "";
-				});
-			} catch (Exception e) { this.client.execute(() -> status = "Bad data."); }
+				java.util.List<Integer> order = new java.util.ArrayList<>();
+				for (int i = 0; i < t.size(); i++) order.add(i);
+				order.sort((x, y) -> t.get(x).compareToIgnoreCase(t.get(y)));
+				List<String> sortedT = new ArrayList<>();
+				List<long[]> sortedV = new ArrayList<>();
+				for (int i : order) { sortedT.add(t.get(i)); sortedV.add(v.get(i)); }
+				tickers = sortedT;
+				vals = sortedV;
+				status = sortedT.isEmpty()
+						? "No shared prices yet — scan auctions to collect prices."
+					: "";
+			});
 		});
 	}
-
 	private double toGuiX(double x) { return (x - this.width / 2.0) / uiScale + this.width / 2.0; }
 	private double toGuiY(double y) { return (y - this.height / 2.0) / uiScale + this.height / 2.0; }
 
