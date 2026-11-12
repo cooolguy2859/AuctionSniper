@@ -46,7 +46,7 @@ public final class PriceStream {
 		String url = MarketConfig.apiBase() + "/api/stream";
 		HttpRequest req = HttpRequest.newBuilder(URI.create(url))
 				.timeout(Duration.ofMinutes(30))
-				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY)
+				.header("ngrok-skip-browser-warning", "true").header("X-Market-Key", com.lifestealmarket.MarketConfig.API_KEY).header("X-Server-Id", com.lifestealmarket.MarketConfig.serverId())
 				.header("X-User", com.lifestealmarket.MarketConfig.userName())
 				.header("X-Token", com.lifestealmarket.MarketConfig.token())
 				.header("Accept", "text/event-stream")
