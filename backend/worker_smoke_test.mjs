@@ -30,7 +30,7 @@ const DB = {
                 orders: 2,
                 listed: 7,
                 material: "minecraft:diamond",
-                depth_json: '[{"price":11000,"qty":4}]'
+                depthJson: '[{"price":11000,"qty":4}]'
               }] };
             }
             if (sql.includes("FROM observations") && sql.includes("GROUP BY item_id")) {
