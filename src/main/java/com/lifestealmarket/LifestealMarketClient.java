@@ -50,6 +50,7 @@ public class LifestealMarketClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		MarketConfig.load();
+		NetworthHud.initialize();
 		ModSounds.register();
 
 		Discovery.resolve(true);
