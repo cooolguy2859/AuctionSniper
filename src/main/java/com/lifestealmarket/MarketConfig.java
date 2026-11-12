@@ -135,6 +135,9 @@ public class MarketConfig {
 	public int onboardResetSeen = 0;
 
 	public boolean showNetworthTags = true;
+	public boolean showHud = true;
+	public String hudStyle = "sharp";
+	public int hudX = 8, hudY = 8;
 
 	public boolean seenViewAh = false;
 	public boolean seenPartners = false;
