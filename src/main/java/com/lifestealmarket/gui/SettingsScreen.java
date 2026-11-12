@@ -68,6 +68,16 @@ public class SettingsScreen extends Screen {
 		cur = card(s0, cur, C_ACCENT);
 
 		s0 = cur;
+		decor.add(new Dec("head", "ON-SCREEN HUD", RCL + 6, cur, 0, 0)); cur += 14;
+		cur = segments(cur, "Display", new String[]{ "On", "Off" }, cfg.showHud ? 0 : 1,
+				i -> { cfg.showHud = i == 0; MarketConfig.save(); clearAndInit(); },
+				"§b§lNet-worth panel while playing", "§7Shows net worth, daily change and 7-day trend");
+		cur = segments(cur, "Style", new String[]{ "Glass", "Sharp", "Bold" },
+				"glass".equals(cfg.hudStyle) ? 0 : "bold".equals(cfg.hudStyle) ? 2 : 1,
+				i -> { cfg.hudStyle = new String[]{ "glass", "sharp", "bold" }[i]; MarketConfig.save(); clearAndInit(); });
+		cur = card(s0, cur, C_ACCENT);
+
+		s0 = cur;
 		decor.add(new Dec("head", "PRIVACY", RCL + 6, cur, 0, 0)); cur += 14;
 		cur = segments(cur, "Net worth", new String[]{ "Public", "Private" }, cfg.netPrivate ? 1 : 0,
 				i -> { cfg.netPrivate = i == 1; MarketConfig.save();
